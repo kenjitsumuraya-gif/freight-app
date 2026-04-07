@@ -463,18 +463,18 @@ export default function App() {
         .title { font-size: 26px; font-weight: 800; margin: 0 0 6px; }
         .subtitle { margin: 0 0 14px; color: #475569; font-size: 13px; }
         .message { background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; }
-        .grid-top { display: grid; gap: 16px; grid-template-columns: 1fr 0.95fr; }
+        .grid-top { display: grid; gap: 14px; grid-template-columns: 1fr 0.95fr; }
         .card { background: #fff; border: 1px solid #dbe4ee; border-radius: 18px; box-shadow: 0 2px 10px rgba(15,23,42,0.04); }
         .card-head { padding: 16px 18px 0; }
         .card-title { display: flex; gap: 8px; align-items: center; font-size: 16px; font-weight: 800; }
-        .card-body { padding: 16px 18px 18px; }
-        .field { margin-bottom: 12px; }
+        .card-body { padding: 14px 16px 16px; }
+        .field { margin-bottom: 10px; }
         .label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; }
         .hint { margin-top: 6px; font-size: 11px; color: #64748b; }
         .input, .select, .textarea { width: 100%; border: 1px solid #cbd5e1; background: #fff; border-radius: 12px; padding: 10px 12px; outline: none; }
         .input, .select { height: 44px; }
         .two-col { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        .candidate-hero { border: 1px solid #dbe4ee; border-radius: 16px; padding: 14px; background: #fcfdff; }
+        .candidate-hero { display: none; }
         .muted { color: #64748b; font-size: 12px; }
         .hero-topline { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
         .badge { background: #eef2f7; color: #0f172a; padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
@@ -488,31 +488,31 @@ export default function App() {
         .table-head { background: #f1f5f9; font-size: 12px; font-weight: 800; }
         .table-head > div, .table-row > div { padding: 10px 12px; border-top: 1px solid #e2e8f0; }
         .table-head > div { border-top: 0; }
-        .candidate-list { max-height: 260px; overflow: auto; }
+        .candidate-list { max-height: 220px; overflow: auto; }
         .table-row { width: 100%; text-align: left; background: #fff; border: 0; cursor: pointer; font-size: 12px; }
         .table-row:hover { background: #f8fafc; }
         .empty-box { min-height: 150px; display: flex; align-items: center; justify-content: center; border: 1px dashed #cbd5e1; border-radius: 16px; color: #64748b; text-align: center; padding: 18px; font-size: 13px; }
         .result-stack { display: grid; gap: 12px; }
         .compact-result-stack { gap: 10px; }
-        .hero-result { background: #0f172a; color: #fff; border-radius: 16px; padding: 16px; }
+        .hero-result { background: #0f172a; color: #fff; border-radius: 16px; padding: 14px 16px; }
         .compact-hero-result { padding: 14px 16px; }
         .hero-label { color: #cbd5e1; font-size: 12px; }
-        .hero-price { margin-top: 6px; font-size: 34px; font-weight: 800; line-height: 1.1; }
+        .hero-price { margin-top: 6px; font-size: 32px; font-weight: 800; line-height: 1.1; }
         .hero-sub { margin-top: 6px; color: #cbd5e1; font-size: 12px; }
         .compare-wrap { border: 1px solid #dbe4ee; border-radius: 16px; overflow: hidden; background: #fff; }
         .compact-compare-wrap { border-radius: 14px; }
-        .compare-title { padding: 12px 14px; font-size: 14px; font-weight: 800; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+        .compare-title { padding: 10px 12px; font-size: 14px; font-weight: 800; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
         .compare-table { overflow: auto; }
         .compare-head, .compare-row { display: grid; grid-template-columns: 60px 1.2fr 100px 90px 90px 100px; align-items: center; }
         .compact-compare-head { font-size: 11px; }
         .compare-head { background: #f1f5f9; font-weight: 800; }
-        .compare-head > div, .compare-row > div { padding: 10px 12px; border-top: 1px solid #e2e8f0; font-size: 12px; }
+        .compare-head > div, .compare-row > div { padding: 8px 10px; border-top: 1px solid #e2e8f0; font-size: 12px; }
         .compare-head > div { border-top: 0; }
-        .compact-compare-row > div { padding: 10px 12px; }
+        .compact-compare-row > div { padding: 8px 10px; }
         .compare-row.is-cheapest { background: #ecfdf5; }
         .min-badge { display: inline-block; margin-left: 6px; padding: 3px 7px; border-radius: 999px; background: #10b981; color: #fff; font-size: 10px; font-weight: 700; vertical-align: middle; }
         .total-cell { font-weight: 800; }
-        .note-box { border: 1px solid #fde68a; background: #fffbeb; color: #92400e; border-radius: 14px; padding: 12px; display: grid; gap: 4px; font-size: 12px; }
+        .note-box { border: 1px solid #fde68a; background: #fffbeb; color: #92400e; border-radius: 14px; padding: 10px 12px; display: grid; gap: 4px; font-size: 12px; }
         .compact-note-box { padding: 10px 12px; }
         .note-title { display: flex; align-items: center; gap: 8px; font-weight: 800; }
         .csv-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px; }
@@ -557,23 +557,7 @@ export default function App() {
                 </div>
               </div>
 
-              {matchedProduct ? (
-                <div className="candidate-hero">
-                  <div className="hero-topline">
-                    <div>
-                      <div className="muted">候補先頭</div>
-                      <div className="candidate-name">{matchedProduct.name}</div>
-                      <div className="muted">品番: {matchedProduct.code}</div>
-                    </div>
-                    <div className="badge">基準 {matchedProduct.standardSize}</div>
-                  </div>
-                  <div className="mini-grid" style={{ marginTop: 12 }}>
-                    <div className="mini-card"><div className="mini-label">実重量</div><div className="mini-value">{matchedProduct.actualWeight ?? "-"}</div></div>
-                    <div className="mini-card"><div className="mini-label">m3重量</div><div className="mini-value">{matchedProduct.cubicWeight ?? "-"}</div></div>
-                    <div className="mini-card"><div className="mini-label">候補件数</div><div className="mini-value">{filteredProducts.length}</div></div>
-                  </div>
-                </div>
-              ) : searchText.trim() ? <div className="note-box">一致する商品が見つかっていません。</div> : null}
+              {searchText.trim() && !matchedProduct ? <div className="note-box">一致する商品が見つかっていません。</div> : null}
             </div>
           </div>
 

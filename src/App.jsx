@@ -39,7 +39,12 @@ const baseRateTable = [
 ];
 
 const defaultCarriers = {
-  佐川急便: { name: "佐川急便", islandSurcharge: 0, relaySurcharge: 0, rateTable: baseRateTable },
+  佐川急便: {
+    name: "佐川急便",
+    islandSurcharge: 0,
+    relaySurcharge: 0,
+    rateTable: baseRateTable,
+  },
   ヤマト運輸: {
     name: "ヤマト運輸",
     islandSurcharge: 0,
@@ -89,6 +94,7 @@ function parseCsv(text) {
     const result = [];
     let current = "";
     let inQuotes = false;
+
     for (let i = 0; i < line.length; i += 1) {
       const char = line[i];
       if (char === '"') {
@@ -105,6 +111,7 @@ function parseCsv(text) {
         current += char;
       }
     }
+
     result.push(current);
     return result.map((v) => v.trim());
   };
@@ -149,6 +156,64 @@ function getFreightDetail(product, prefecture, carrierName, carriers) {
     relayFee,
     total: basePrice + islandFee + relayFee,
   };
+}
+
+function mapProductRows(productRows) {
+  return productRows
+    .map((row) => ({
+      code: String(row.code || row.品番 || "").trim(),
+      name: String(row.name || row.品名 || "").trim(),
+      standardSize: parseNumber(row.standardSize || row.基準サイズ || row.基準),
+      actualWeight: parseNumber(row.actualWeight || row.実重量),
+      cubicWeight: parseNumber(row.cubicWeight || row["m3重量"] || row["㎥重量"]),
+      carrier1: String(row.carrier1 || row["運送便①"] || row["運送便1"] || "").trim(),
+      carrier2: String(row.carrier2 || row["運送便②"] || row["運送便2"] || "").trim(),
+      carrier3: String(row.carrier3 || row["運送便③"] || row["運送便3"] || "").trim(),
+    }))
+    .filter((row) => row.code && row.name && row.standardSize != null);
+}
+
+function mapCarrierRows(carrierRows) {
+  const nextCarriers = {};
+
+  carrierRows.forEach((row) => {
+    const name = String(row.carrier || row.運送会社 || "").trim();
+    const size = parseNumber(row.size || row.サイズ);
+    const weight = parseNumber(row.weight || row.重量);
+    const region = String(row.region || row.地域 || "").trim();
+    const price = parseNumber(row.price || row.運賃);
+    const island = parseNumber(row.islandSurcharge || row.離島加算) || 0;
+    const relay = parseNumber(row.relaySurcharge || row.中継料) || 0;
+
+    if (!name || size == null || !region || price == null) return;
+
+    if (!nextCarriers[name]) {
+      nextCarriers[name] = {
+        name,
+        islandSurcharge: island,
+        relaySurcharge: relay,
+        rateTable: [],
+      };
+    }
+
+    let rowEntry = nextCarriers[name].rateTable.find((item) => Number(item.size) === Number(size));
+    if (!rowEntry) {
+      rowEntry = {
+        size,
+        weight: weight == null ? null : weight,
+        prices: {},
+      };
+      nextCarriers[name].rateTable.push(rowEntry);
+    }
+
+    rowEntry.prices[region] = price;
+  });
+
+  Object.values(nextCarriers).forEach((carrier) => {
+    carrier.rateTable.sort((a, b) => Number(a.size) - Number(b.size));
+  });
+
+  return nextCarriers;
 }
 
 function FreightResultCard({ matchedProduct, prefecture, freightDetails }) {
@@ -226,6 +291,47 @@ export default function App() {
     "carrier,size,weight,region,price,islandSurcharge,relaySurcharge\n佐川急便,60,2,南九州,410,0,0\n佐川急便,60,2,北九州,410,0,0\nヤマト運輸,60,2,南九州,530,0,0\n西濃運輸,60,2,南九州,470,0,0"
   );
   const [message, setMessage] = useState("");
+
+  const loadInitialCsvFiles = async () => {
+    try {
+      const [productResponse, carrierResponse] = await Promise.all([
+        fetch("/products.csv", { cache: "no-store" }),
+        fetch("/carriers.csv", { cache: "no-store" }),
+      ]);
+
+      if (!productResponse.ok || !carrierResponse.ok) {
+        throw new Error("CSVの取得に失敗しました。");
+      }
+
+      const productText = await productResponse.text();
+      const carrierText = await carrierResponse.text();
+
+      setProductCsvText(productText);
+      setCarrierCsvText(carrierText);
+
+      const productRows = parseCsv(productText);
+      const mappedProducts = mapProductRows(productRows);
+
+      const carrierRows = parseCsv(carrierText);
+      const nextCarriers = mapCarrierRows(carrierRows);
+
+      if (mappedProducts.length) {
+        setProducts(mappedProducts);
+      }
+
+      if (Object.keys(nextCarriers).length) {
+        setCarriers(nextCarriers);
+      }
+
+      setMessage("GitHub上のCSVを自動読み込みしました。");
+    } catch {
+      setMessage("初期CSVの自動読み込みに失敗しました。手動読込も使えます。");
+    }
+  };
+
+  useEffect(() => {
+    loadInitialCsvFiles();
+  }, []);
 
   const readFileAsText = (file, onLoad) => {
     const reader = new FileReader();
@@ -315,18 +421,7 @@ export default function App() {
   const importProductsFromCsv = () => {
     try {
       const rows = parseCsv(productCsvText);
-      const mapped = rows
-        .map((row) => ({
-          code: String(row.code || row.品番 || "").trim(),
-          name: String(row.name || row.品名 || "").trim(),
-          standardSize: parseNumber(row.standardSize || row.基準サイズ || row.基準),
-          actualWeight: parseNumber(row.actualWeight || row.実重量),
-          cubicWeight: parseNumber(row.cubicWeight || row["m3重量"] || row["㎥重量"]),
-          carrier1: String(row.carrier1 || row["運送便①"] || row["運送便1"] || "").trim(),
-          carrier2: String(row.carrier2 || row["運送便②"] || row["運送便2"] || "").trim(),
-          carrier3: String(row.carrier3 || row["運送便③"] || row["運送便3"] || "").trim(),
-        }))
-        .filter((row) => row.code && row.name && row.standardSize != null);
+      const mapped = mapProductRows(rows);
 
       if (!mapped.length) {
         setMessage("商品CSVの読み込みに失敗しました。ヘッダー名を確認してください。");
@@ -343,35 +438,7 @@ export default function App() {
   const importCarriersFromCsv = () => {
     try {
       const rows = parseCsv(carrierCsvText);
-      const nextCarriers = {};
-
-      rows.forEach((row) => {
-        const name = String(row.carrier || row.運送会社 || "").trim();
-        const size = parseNumber(row.size || row.サイズ);
-        const weight = parseNumber(row.weight || row.重量);
-        const region = String(row.region || row.地域 || "").trim();
-        const price = parseNumber(row.price || row.運賃);
-        const island = parseNumber(row.islandSurcharge || row.離島加算) || 0;
-        const relay = parseNumber(row.relaySurcharge || row.中継料) || 0;
-
-        if (!name || size == null || !region || price == null) return;
-
-        if (!nextCarriers[name]) {
-          nextCarriers[name] = { name, islandSurcharge: island, relaySurcharge: relay, rateTable: [] };
-        }
-
-        let rowEntry = nextCarriers[name].rateTable.find((item) => Number(item.size) === Number(size));
-        if (!rowEntry) {
-          rowEntry = { size, weight: weight == null ? null : weight, prices: {} };
-          nextCarriers[name].rateTable.push(rowEntry);
-        }
-
-        rowEntry.prices[region] = price;
-      });
-
-      Object.values(nextCarriers).forEach((carrier) => {
-        carrier.rateTable.sort((a, b) => Number(a.size) - Number(b.size));
-      });
+      const nextCarriers = mapCarrierRows(rows);
 
       if (!Object.keys(nextCarriers).length) {
         setMessage("運賃CSVの読み込みに失敗しました。ヘッダー名を確認してください。");
@@ -558,7 +625,7 @@ export default function App() {
                   <button type="button" className="btn btn-secondary" onClick={importProductsFromCsv}>商品マスタを読み込む</button>
                   <input ref={productFileInputRef} type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={handleProductFileChange} />
                 </div>
-                <div className="hint">運送便①のみなら固定表示、運送便②③が入っていれば候補分の運賃も表示します。</div>
+                <div className="hint">GitHub上の `public/products.csv` を更新すれば、再デプロイ後に自動反映されます。</div>
               </div>
               <div className="header-box">
                 <div className="header-box-title"><Package size={14} /> 対応ヘッダー</div>
@@ -579,7 +646,7 @@ export default function App() {
                   <button type="button" className="btn btn-secondary" onClick={importCarriersFromCsv}>運賃表を読み込む</button>
                   <input ref={carrierFileInputRef} type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={handleCarrierFileChange} />
                 </div>
-                <div className="hint">運送会社ごとのサイズ別運賃表を読み込みます。</div>
+                <div className="hint">GitHub上の `public/carriers.csv` を更新すれば、再デプロイ後に自動反映されます。</div>
               </div>
               <div className="header-box">
                 <div className="header-box-title"><Package size={14} /> 対応ヘッダー</div>

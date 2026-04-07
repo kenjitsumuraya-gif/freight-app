@@ -2,17 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Package, Search, Truck, Upload } from "lucide-react";
 
 const defaultProducts = [
-  { code: "5145800", name: "移動式木工具収納ケース", standardSize: 220, actualWeight: 17.8, cubicWeight: 71 },
-  { code: "5102010", name: "ものづくり基本道具収納ケース", standardSize: 190, actualWeight: null, cubicWeight: 63 },
-  { code: "5372110", name: "ベルトサンダー TY-200", standardSize: 160, actualWeight: null, cubicWeight: 33 },
-  { code: "5372111", name: "ベルトサンダー TY-200専用台", standardSize: 150, actualWeight: null, cubicWeight: 30 },
-  { code: "5372130", name: "ベルトサンダー TS1NDX", standardSize: 160, actualWeight: null, cubicWeight: 48 },
-  { code: "5372017", name: "ベルトサンダー BDS-1010", standardSize: 140, actualWeight: null, cubicWeight: 14 },
-  { code: "5166500", name: "バンドソー BT-500", standardSize: 240, actualWeight: null, cubicWeight: 142 },
-  { code: "5155408", name: "卓上切断機 TS225", standardSize: 140, actualWeight: 12, cubicWeight: 17 },
-  { code: "5155780", name: "バンドソー TBS-80", standardSize: 160, actualWeight: 13, cubicWeight: 28 },
-  { code: "5367905", name: "ボール盤床上台 SB-2", standardSize: 170, actualWeight: null, cubicWeight: 44 },
-  { code: "5155811", name: "自動鉋盤 AP-10N", standardSize: 120, actualWeight: 26, cubicWeight: 14 },
+  { code: "5145800", name: "移動式木工具収納ケース", standardSize: 220, actualWeight: 17.8, cubicWeight: 70.7, carrier1: "佐川急便", carrier2: "", carrier3: "" },
+  { code: "5102010", name: "ものづくり基本道具収納ケース", standardSize: 190, actualWeight: null, cubicWeight: 62.5, carrier1: "佐川急便", carrier2: "", carrier3: "" },
+  { code: "5372110", name: "ベルトサンダー TY-200", standardSize: 160, actualWeight: null, cubicWeight: 32.6, carrier1: "佐川急便", carrier2: "ヤマト運輸", carrier3: "西濃運輸" },
+  { code: "5372111", name: "ベルトサンダー TY-200専用台", standardSize: 150, actualWeight: null, cubicWeight: 30.3, carrier1: "佐川急便", carrier2: "ヤマト運輸", carrier3: "" },
+  { code: "5372130", name: "ベルトサンダー TS1NDX", standardSize: 160, actualWeight: null, cubicWeight: 48.2, carrier1: "佐川急便", carrier2: "", carrier3: "" },
+  { code: "5372017", name: "ベルトサンダー BDS-1010", standardSize: 140, actualWeight: null, cubicWeight: 14.5, carrier1: "佐川急便", carrier2: "", carrier3: "" },
 ];
 
 const prefectureToRegion = {
@@ -44,14 +39,28 @@ const baseRateTable = [
 ];
 
 const defaultCarriers = {
-  佐川急便: { name: "佐川急便", islandSurcharge: 0, relaySurcharge: 0, rateTable: baseRateTable },
+  佐川急便: {
+    name: "佐川急便",
+    islandSurcharge: 0,
+    relaySurcharge: 0,
+    rateTable: baseRateTable,
+  },
   ヤマト運輸: {
     name: "ヤマト運輸",
     islandSurcharge: 0,
     relaySurcharge: 0,
     rateTable: baseRateTable.map((row) => ({
       ...row,
-      prices: Object.fromEntries(Object.entries(row.prices).map(([k, v]) => [k, v + 120])),
+      prices: Object.fromEntries(Object.entries(row.prices).map(([key, value]) => [key, value + 120])),
+    })),
+  },
+  西濃運輸: {
+    name: "西濃運輸",
+    islandSurcharge: 0,
+    relaySurcharge: 0,
+    rateTable: baseRateTable.map((row) => ({
+      ...row,
+      prices: Object.fromEntries(Object.entries(row.prices).map(([key, value]) => [key, value + 60])),
     })),
   },
 };
@@ -61,25 +70,31 @@ const allPrefectures = Object.keys(prefectureToRegion);
 function normalizeText(value) {
   return String(value ?? "").toLowerCase().replace(/[\s　\-ー―−]/g, "").trim();
 }
+
 function parseNumber(value) {
   if (value === "" || value == null) return null;
   const num = Number(String(value).replace(/,/g, "").trim());
   return Number.isFinite(num) ? num : null;
 }
+
 function formatYen(value) {
   if (value == null || Number.isNaN(value)) return "-";
   return `¥${Number(value).toLocaleString("ja-JP")}`;
 }
+
 function getApplicableSize(standardSize, rateTable) {
   return rateTable.find((row) => Number(row.size) >= Number(standardSize)) || null;
 }
+
 function parseCsv(text) {
   const lines = String(text).replace(/^\uFEFF/, "").replace(/\r/g, "").split("\n").filter((line) => line.trim() !== "");
   if (!lines.length) return [];
+
   const splitLine = (line) => {
     const result = [];
     let current = "";
     let inQuotes = false;
+
     for (let i = 0; i < line.length; i += 1) {
       const char = line[i];
       if (char === '"') {
@@ -96,9 +111,11 @@ function parseCsv(text) {
         current += char;
       }
     }
+
     result.push(current);
     return result.map((v) => v.trim());
   };
+
   const headers = splitLine(lines[0]);
   return lines.slice(1).map((line) => {
     const values = splitLine(line);
@@ -110,26 +127,90 @@ function parseCsv(text) {
   });
 }
 
-function FreightResultCard({ matchedProduct, prefecture, carrier, priceDetail }) {
-  if (!matchedProduct || !prefecture || !carrier || !priceDetail) {
-    return <div className="empty-box">品番か商品名を入れて、都道府県と運送会社を選ぶとここに運賃が出ます。</div>;
+function getProductCarrierNames(product) {
+  const candidates = [product?.carrier1, product?.carrier2, product?.carrier3]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  return [...new Set(candidates)];
+}
+
+function getFreightDetail(product, prefecture, carrierName, carriers) {
+  if (!product || !prefecture || !carrierName) return null;
+  const carrier = carriers[carrierName];
+  if (!carrier) return null;
+  const region = prefectureToRegion[prefecture];
+  if (!region) return null;
+  const applicableRow = getApplicableSize(product.standardSize, carrier.rateTable);
+  if (!applicableRow) return null;
+  const basePrice = parseNumber(applicableRow.prices[region]);
+  if (basePrice == null) return null;
+  const islandFee = parseNumber(carrier.islandSurcharge) || 0;
+  const relayFee = parseNumber(carrier.relaySurcharge) || 0;
+
+  return {
+    carrierName,
+    region,
+    applicableRow,
+    basePrice,
+    islandFee,
+    relayFee,
+    total: basePrice + islandFee + relayFee,
+  };
+}
+
+function FreightResultCard({ matchedProduct, prefecture, freightDetails }) {
+  if (!matchedProduct || !prefecture || !freightDetails.length) {
+    return <div className="empty-box">品番か商品名を入れて、都道府県を選ぶとここに運賃が出ます。</div>;
   }
+
+  const sorted = [...freightDetails].sort((a, b) => a.total - b.total);
+  const cheapest = sorted[0];
+
   return (
     <div className="result-stack">
       <div className="hero-result">
-        <div className="hero-label">合計運賃</div>
-        <div className="hero-price">{formatYen(priceDetail.total)}</div>
-        <div className="hero-sub">{prefecture} / {priceDetail.region} / {carrier.name} / サイズ {priceDetail.applicableRow.size}</div>
+        <div className="hero-label">最安候補</div>
+        <div className="hero-price">{formatYen(cheapest.total)}</div>
+        <div className="hero-sub">
+          {cheapest.carrierName} / {prefecture} / {cheapest.region} / サイズ {cheapest.applicableRow.size}
+        </div>
       </div>
-      <div className="mini-grid">
-        <div className="mini-card"><div className="mini-label">基本運賃</div><div className="mini-value">{formatYen(priceDetail.basePrice)}</div></div>
-        <div className="mini-card"><div className="mini-label">離島加算</div><div className="mini-value">{formatYen(priceDetail.islandFee)}</div></div>
-        <div className="mini-card"><div className="mini-label">中継料</div><div className="mini-value">{formatYen(priceDetail.relayFee)}</div></div>
+
+      <div className="compare-wrap">
+        <div className="compare-title">候補便 比較表</div>
+        <div className="compare-table">
+          <div className="compare-head">
+            <div>候補</div>
+            <div>運送会社</div>
+            <div>基本運賃</div>
+            <div>離島加算</div>
+            <div>中継料</div>
+            <div>合計運賃</div>
+          </div>
+
+          {freightDetails.map((detail, index) => {
+            const isCheapest = detail.total === cheapest.total;
+            return (
+              <div key={`${detail.carrierName}-${index}`} className={`compare-row ${isCheapest ? "is-cheapest" : ""}`}>
+                <div>①②③"[index] || `候補${index + 1}`}</div>
+                <div>
+                  {detail.carrierName}
+                  {isCheapest ? <span className="min-badge">最安</span> : null}
+                </div>
+                <div>{formatYen(detail.basePrice)}</div>
+                <div>{formatYen(detail.islandFee)}</div>
+                <div>{formatYen(detail.relayFee)}</div>
+                <div className="total-cell">{formatYen(detail.total)}</div>
+              </div>
+            );
+          })}
+        </div>
       </div>
+
       <div className="note-box">
         <div className="note-title"><AlertCircle size={16} /> 補足</div>
-        <div>CSVで商品マスタも運賃表も差し替えできます。</div>
-        <div>離島加算や中継料は運送会社ごとの設定値を自動加算します。</div>
+        <div>商品CSVの「運送便①」がある場合は第1候補として表示します。</div>
+        <div>「運送便②」「運送便③」が入っている場合は、候補便を比較表でまとめて表示します。</div>
       </div>
     </div>
   );
@@ -139,15 +220,18 @@ export default function App() {
   const productFileInputRef = useRef(null);
   const carrierFileInputRef = useRef(null);
   const candidateListRef = useRef(null);
+
   const [products, setProducts] = useState(defaultProducts);
   const [carriers, setCarriers] = useState(defaultCarriers);
   const [searchText, setSearchText] = useState("");
   const [prefecture, setPrefecture] = useState("");
-  const [carrierName, setCarrierName] = useState(Object.keys(defaultCarriers)[0]);
-  const [productCsvText, setProductCsvText] = useState("code,name,standardSize,actualWeight,cubicWeight\n5145800,移動式木工具収納ケース,220,17.8,71\n5102010,ものづくり基本道具収納ケース,190,,63");
-  const [carrierCsvText, setCarrierCsvText] = useState("carrier,size,weight,region,price,islandSurcharge,relaySurcharge\n佐川急便,60,2,南九州,410,0,0\n佐川急便,60,2,北九州,410,0,0\nヤマト運輸,60,2,南九州,530,0,0\nヤマト運輸,60,2,北九州,530,0,0");
+  const [productCsvText, setProductCsvText] = useState(
+    "品番,品名,基準サイズ,実重量,m3重量,運送便①,運送便②,運送便③\n5145800,移動式木工具収納ケース,220,17.8,70.7,佐川急便,,\n5372110,ベルトサンダー TY-200,160,,32.6,佐川急便,ヤマト運輸,西濃運輸"
+  );
+  const [carrierCsvText, setCarrierCsvText] = useState(
+    "carrier,size,weight,region,price,islandSurcharge,relaySurcharge\n佐川急便,60,2,南九州,410,0,0\n佐川急便,60,2,北九州,410,0,0\nヤマト運輸,60,2,南九州,530,0,0\n西濃運輸,60,2,南九州,470,0,0"
+  );
   const [message, setMessage] = useState("");
-  const currentCarrier = carriers[carrierName] || null;
 
   const readFileAsText = (file, onLoad) => {
     const reader = new FileReader();
@@ -179,58 +263,82 @@ export default function App() {
   const filteredProducts = useMemo(() => {
     const keyword = normalizeText(searchText);
     if (!keyword) return products;
-    const matched = products.filter((p) => {
-      const codeText = normalizeText(p.code);
-      const nameText = normalizeText(p.name);
+
+    const matched = products.filter((product) => {
+      const codeText = normalizeText(product.code);
+      const nameText = normalizeText(product.name);
       const combined = `${codeText}${nameText}`;
       return codeText.includes(keyword) || nameText.includes(keyword) || combined.includes(keyword);
     });
+
     return matched.sort((a, b) => {
-      const aName = normalizeText(a.name), bName = normalizeText(b.name);
-      const aCode = normalizeText(a.code), bCode = normalizeText(b.code);
-      const aScore = (aCode === keyword ? 100 : 0) + (aName === keyword ? 90 : 0) + (aName.startsWith(keyword) ? 50 : 0) + (aCode.startsWith(keyword) ? 40 : 0) + (aName.includes(keyword) ? 20 : 0) + (aCode.includes(keyword) ? 10 : 0);
-      const bScore = (bCode === keyword ? 100 : 0) + (bName === keyword ? 90 : 0) + (bName.startsWith(keyword) ? 50 : 0) + (bCode.startsWith(keyword) ? 40 : 0) + (bName.includes(keyword) ? 20 : 0) + (bCode.includes(keyword) ? 10 : 0);
+      const aName = normalizeText(a.name);
+      const bName = normalizeText(b.name);
+      const aCode = normalizeText(a.code);
+      const bCode = normalizeText(b.code);
+
+      const aScore =
+        (aCode === keyword ? 100 : 0) +
+        (aName === keyword ? 90 : 0) +
+        (aName.startsWith(keyword) ? 50 : 0) +
+        (aCode.startsWith(keyword) ? 40 : 0) +
+        (aName.includes(keyword) ? 20 : 0) +
+        (aCode.includes(keyword) ? 10 : 0);
+
+      const bScore =
+        (bCode === keyword ? 100 : 0) +
+        (bName === keyword ? 90 : 0) +
+        (bName.startsWith(keyword) ? 50 : 0) +
+        (bCode.startsWith(keyword) ? 40 : 0) +
+        (bName.includes(keyword) ? 20 : 0) +
+        (bCode.includes(keyword) ? 10 : 0);
+
       return bScore - aScore;
     });
   }, [products, searchText]);
 
   useEffect(() => {
-    if (candidateListRef.current) candidateListRef.current.scrollTop = 0;
+    if (candidateListRef.current) {
+      candidateListRef.current.scrollTop = 0;
+    }
   }, [searchText, products]);
 
   const matchedProduct = useMemo(() => {
     if (!searchText.trim()) return null;
-    const exact = products.find((p) => p.code === searchText.trim());
+    const exact = products.find((product) => product.code === searchText.trim());
     return exact || filteredProducts[0] || null;
   }, [products, searchText, filteredProducts]);
 
-  const priceDetail = useMemo(() => {
-    if (!matchedProduct || !prefecture || !currentCarrier) return null;
-    const region = prefectureToRegion[prefecture];
-    if (!region) return null;
-    const applicableRow = getApplicableSize(matchedProduct.standardSize, currentCarrier.rateTable);
-    if (!applicableRow) return null;
-    const basePrice = parseNumber(applicableRow.prices[region]);
-    if (basePrice == null) return null;
-    const islandFee = parseNumber(currentCarrier.islandSurcharge) || 0;
-    const relayFee = parseNumber(currentCarrier.relaySurcharge) || 0;
-    return { region, applicableRow, basePrice, islandFee, relayFee, total: basePrice + islandFee + relayFee };
-  }, [matchedProduct, prefecture, currentCarrier]);
+  const freightDetails = useMemo(() => {
+    if (!matchedProduct || !prefecture) return [];
+    const carrierNames = getProductCarrierNames(matchedProduct);
+    if (!carrierNames.length) return [];
+    return carrierNames
+      .map((carrierName) => getFreightDetail(matchedProduct, prefecture, carrierName, carriers))
+      .filter(Boolean);
+  }, [matchedProduct, prefecture, carriers]);
 
   const importProductsFromCsv = () => {
     try {
       const rows = parseCsv(productCsvText);
-      const mapped = rows.map((row) => ({
-        code: String(row.code || row.品番 || "").trim(),
-        name: String(row.name || row.品名 || "").trim(),
-        standardSize: parseNumber(row.standardSize || row.基準サイズ || row.基準),
-        actualWeight: parseNumber(row.actualWeight || row.実重量),
-        cubicWeight: parseNumber(row.cubicWeight || row["m3重量"] || row["㎥重量"]),
-      })).filter((row) => row.code && row.name && row.standardSize != null);
+      const mapped = rows
+        .map((row) => ({
+          code: String(row.code || row.品番 || "").trim(),
+          name: String(row.name || row.品名 || "").trim(),
+          standardSize: parseNumber(row.standardSize || row.基準サイズ || row.基準),
+          actualWeight: parseNumber(row.actualWeight || row.実重量),
+          cubicWeight: parseNumber(row.cubicWeight || row["m3重量"] || row["㎥重量"]),
+          carrier1: String(row.carrier1 || row["運送便①"] || row["運送便1"] || "").trim(),
+          carrier2: String(row.carrier2 || row["運送便②"] || row["運送便2"] || "").trim(),
+          carrier3: String(row.carrier3 || row["運送便③"] || row["運送便3"] || "").trim(),
+        }))
+        .filter((row) => row.code && row.name && row.standardSize != null);
+
       if (!mapped.length) {
         setMessage("商品CSVの読み込みに失敗しました。ヘッダー名を確認してください。");
         return;
       }
+
       setProducts(mapped);
       setMessage(`商品マスタを ${mapped.length} 件読み込みました。`);
     } catch {
@@ -242,6 +350,7 @@ export default function App() {
     try {
       const rows = parseCsv(carrierCsvText);
       const nextCarriers = {};
+
       rows.forEach((row) => {
         const name = String(row.carrier || row.運送会社 || "").trim();
         const size = parseNumber(row.size || row.サイズ);
@@ -250,22 +359,32 @@ export default function App() {
         const price = parseNumber(row.price || row.運賃);
         const island = parseNumber(row.islandSurcharge || row.離島加算) || 0;
         const relay = parseNumber(row.relaySurcharge || row.中継料) || 0;
+
         if (!name || size == null || !region || price == null) return;
-        if (!nextCarriers[name]) nextCarriers[name] = { name, islandSurcharge: island, relaySurcharge: relay, rateTable: [] };
+
+        if (!nextCarriers[name]) {
+          nextCarriers[name] = { name, islandSurcharge: island, relaySurcharge: relay, rateTable: [] };
+        }
+
         let rowEntry = nextCarriers[name].rateTable.find((item) => Number(item.size) === Number(size));
         if (!rowEntry) {
           rowEntry = { size, weight: weight == null ? null : weight, prices: {} };
           nextCarriers[name].rateTable.push(rowEntry);
         }
+
         rowEntry.prices[region] = price;
       });
-      Object.values(nextCarriers).forEach((carrier) => carrier.rateTable.sort((a, b) => Number(a.size) - Number(b.size)));
+
+      Object.values(nextCarriers).forEach((carrier) => {
+        carrier.rateTable.sort((a, b) => Number(a.size) - Number(b.size));
+      });
+
       if (!Object.keys(nextCarriers).length) {
         setMessage("運賃CSVの読み込みに失敗しました。ヘッダー名を確認してください。");
         return;
       }
+
       setCarriers(nextCarriers);
-      setCarrierName(Object.keys(nextCarriers)[0]);
       setMessage(`運送会社マスタを ${Object.keys(nextCarriers).length} 社読み込みました。`);
     } catch {
       setMessage("運賃CSVの読み込みでエラーが出ました。");
@@ -292,7 +411,7 @@ export default function App() {
         .label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 700; }
         .hint { margin-top: 8px; font-size: 12px; color: #64748b; }
         .input, .select, .textarea { width: 100%; border: 1px solid #cbd5e1; background: #fff; border-radius: 16px; padding: 14px 16px; outline: none; }
-        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .two-col { display: grid; grid-template-columns: 1fr; gap: 16px; }
         .candidate-hero { border: 1px solid #dbe4ee; border-radius: 20px; padding: 18px; background: #fcfdff; }
         .muted { color: #64748b; }
         .hero-topline { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
@@ -316,6 +435,43 @@ export default function App() {
         .hero-label { color: #cbd5e1; font-size: 14px; }
         .hero-price { margin-top: 8px; font-size: 44px; font-weight: 800; }
         .hero-sub { margin-top: 8px; color: #cbd5e1; font-size: 14px; }
+        .compare-wrap { border: 1px solid #dbe4ee; border-radius: 20px; overflow: hidden; background: #fff; }
+        .compare-title { padding: 16px 18px; font-size: 18px; font-weight: 800; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+        .compare-table { overflow: auto; }
+        .compare-head, .compare-row {
+          display: grid;
+          grid-template-columns: 90px 1.3fr 140px 120px 120px 140px;
+          align-items: center;
+        }
+        .compare-head {
+          background: #f1f5f9;
+          font-size: 14px;
+          font-weight: 800;
+        }
+        .compare-head > div, .compare-row > div {
+          padding: 14px 16px;
+          border-top: 1px solid #e2e8f0;
+        }
+        .compare-head > div {
+          border-top: 0;
+        }
+        .compare-row.is-cheapest {
+          background: #ecfdf5;
+        }
+        .min-badge {
+          display: inline-block;
+          margin-left: 8px;
+          padding: 4px 8px;
+          border-radius: 999px;
+          background: #10b981;
+          color: #fff;
+          font-size: 11px;
+          font-weight: 700;
+          vertical-align: middle;
+        }
+        .total-cell {
+          font-weight: 800;
+        }
         .note-box { border: 1px solid #fde68a; background: #fffbeb; color: #92400e; border-radius: 18px; padding: 16px; display: grid; gap: 6px; }
         .note-title { display: flex; align-items: center; gap: 8px; font-weight: 800; }
         .csv-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 22px; }
@@ -330,14 +486,15 @@ export default function App() {
         @media (max-width: 820px) {
           .page { padding: 16px; }
           .title { font-size: 30px; }
-          .two-col, .mini-grid { grid-template-columns: 1fr; }
+          .mini-grid { grid-template-columns: 1fr; }
           .table-head, .table-row { grid-template-columns: 110px 1.2fr 80px 80px 90px; font-size: 13px; }
+          .compare-head, .compare-row { grid-template-columns: 90px 160px 120px 100px 100px 120px; font-size: 13px; }
         }
       `}</style>
 
       <div className="page">
         <h1 className="title">品番・品名から運賃を調べるアプリ</h1>
-        <p className="subtitle">品番の完全一致だけでなく、品名や品番の部分一致でも検索できます。運送会社ごとに運賃表を切り替え可能です。</p>
+        <p className="subtitle">品番の完全一致だけでなく、品名や品番の部分一致でも検索できます。商品CSVの運送便①〜③を見て候補運賃を表示します。</p>
         {message ? <div className="message">{message}</div> : null}
 
         <div className="grid-top">
@@ -349,6 +506,7 @@ export default function App() {
                 <input className="input" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="例: 5145800 / バンドソー / TY-200" />
                 <div className="hint">部分一致のあいまい検索に対応しています。</div>
               </div>
+
               <div className="two-col">
                 <div className="field">
                   <label className="label">送り先の都道府県</label>
@@ -357,13 +515,8 @@ export default function App() {
                     {allPrefectures.map((name) => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </div>
-                <div className="field">
-                  <label className="label">運送会社</label>
-                  <select className="select" value={carrierName} onChange={(e) => setCarrierName(e.target.value)}>
-                    {Object.keys(carriers).map((name) => <option key={name} value={name}>{name}</option>)}
-                  </select>
-                </div>
               </div>
+
               {matchedProduct ? (
                 <div className="candidate-hero">
                   <div className="hero-topline">
@@ -376,7 +529,7 @@ export default function App() {
                   </div>
                   <div className="mini-grid" style={{ marginTop: 16 }}>
                     <div className="mini-card"><div className="mini-label">実重量</div><div className="mini-value">{matchedProduct.actualWeight ?? "-"}</div></div>
-                    <div className="mini-card"><div className="mini-label">m³重量</div><div className="mini-value">{matchedProduct.cubicWeight ?? "-"}</div></div>
+                    <div className="mini-card"><div className="mini-label">m3重量</div><div className="mini-value">{matchedProduct.cubicWeight ?? "-"}</div></div>
                     <div className="mini-card"><div className="mini-label">候補件数</div><div className="mini-value">{filteredProducts.length}</div></div>
                   </div>
                 </div>
@@ -389,7 +542,11 @@ export default function App() {
             <div className="card-body">
               <div className="table-wrap">
                 <div className="table-head">
-                  <div>品番</div><div>品名</div><div>基準</div><div>実重量</div><div>m³重量</div>
+                  <div>品番</div>
+                  <div>品名</div>
+                  <div>基準</div>
+                  <div>実重量</div>
+                  <div>m³重量</div>
                 </div>
                 <div ref={candidateListRef} className="candidate-list">
                   {filteredProducts.map((product) => (
@@ -410,7 +567,7 @@ export default function App() {
         <div className="card" style={{ marginTop: 24 }}>
           <div className="card-head"><div className="card-title"><Truck size={22} /> 運賃結果</div></div>
           <div className="card-body">
-            <FreightResultCard matchedProduct={matchedProduct} prefecture={prefecture} carrier={currentCarrier} priceDetail={priceDetail} />
+            <FreightResultCard matchedProduct={matchedProduct} prefecture={prefecture} freightDetails={freightDetails} />
           </div>
         </div>
 
@@ -428,13 +585,13 @@ export default function App() {
                   <button type="button" className="btn btn-secondary" onClick={importProductsFromCsv}>商品マスタを読み込む</button>
                   <input ref={productFileInputRef} type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={handleProductFileChange} />
                 </div>
-                <div className="hint">先にCSVファイルを選ぶと、内容がこの欄に入ります。そのあと「商品マスタを読み込む」を押してください。</div>
+                <div className="hint">運送便①のみなら固定表示、運送便②③が入っていれば候補分の運賃も表示します。</div>
               </div>
               <div className="header-box">
                 <div className="header-box-title"><Package size={16} /> 対応ヘッダー</div>
-                <div>code, name, standardSize, actualWeight, cubicWeight</div>
+                <div>code, name, standardSize, actualWeight, cubicWeight, carrier1, carrier2, carrier3</div>
                 <div style={{ marginTop: 8 }}>または</div>
-                <div>品番, 品名, 基準サイズ または 基準, 実重量, m3重量</div>
+                <div>品番, 品名, 基準サイズ または 基準, 実重量, m3重量, 運送便①, 運送便②, 運送便③</div>
               </div>
             </div>
 
@@ -449,14 +606,13 @@ export default function App() {
                   <button type="button" className="btn btn-secondary" onClick={importCarriersFromCsv}>運賃表を読み込む</button>
                   <input ref={carrierFileInputRef} type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={handleCarrierFileChange} />
                 </div>
-                <div className="hint">先にCSVファイルを選ぶと、内容がこの欄に入ります。そのあと「運賃表を読み込む」を押してください。</div>
+                <div className="hint">運送会社ごとのサイズ別運賃表を読み込みます。</div>
               </div>
               <div className="header-box">
                 <div className="header-box-title"><Package size={16} /> 対応ヘッダー</div>
                 <div>carrier, size, weight, region, price, islandSurcharge, relaySurcharge</div>
                 <div style={{ marginTop: 8 }}>または</div>
                 <div>運送会社, サイズ, 重量, 地域, 運賃, 離島加算, 中継料</div>
-                <div style={{ marginTop: 8, fontSize: 13, color: "#64748b" }}>同じ運送会社名ごとに1つの運賃表として自動でまとめます。</div>
               </div>
             </div>
           </div>

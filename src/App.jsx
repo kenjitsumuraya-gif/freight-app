@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Package, Search, Truck, Upload } from "lucide-react";
+import { AlertCircle, Search, Truck } from "lucide-react";
 
 const defaultProducts = [
   { code: "5145800", name: "移動式木工具収納ケース", standardSize: 220, actualWeight: 17.8, cubicWeight: 70.7, carrier1: "佐川急便", carrier2: "", carrier3: "" },
@@ -276,20 +276,12 @@ function FreightResultCard({ matchedProduct, prefecture, freightDetails }) {
 }
 
 export default function App() {
-  const productFileInputRef = useRef(null);
-  const carrierFileInputRef = useRef(null);
   const candidateListRef = useRef(null);
 
   const [products, setProducts] = useState(defaultProducts);
   const [carriers, setCarriers] = useState(defaultCarriers);
   const [searchText, setSearchText] = useState("");
   const [prefecture, setPrefecture] = useState("");
-  const [productCsvText, setProductCsvText] = useState(
-    "品番,品名,基準サイズ,実重量,m3重量,運送便①,運送便②,運送便③\n5145800,移動式木工具収納ケース,220,17.8,70.7,佐川急便,,\n5372110,ベルトサンダー TY-200,160,,32.6,佐川急便,ヤマト運輸,西濃運輸"
-  );
-  const [carrierCsvText, setCarrierCsvText] = useState(
-    "carrier,size,weight,region,price,islandSurcharge,relaySurcharge\n佐川急便,60,2,南九州,410,0,0\n佐川急便,60,2,北九州,410,0,0\nヤマト運輸,60,2,南九州,530,0,0\n西濃運輸,60,2,南九州,470,0,0"
-  );
   const [message, setMessage] = useState("");
 
   const loadInitialCsvFiles = async () => {
@@ -305,9 +297,6 @@ export default function App() {
 
       const productText = await productResponse.text();
       const carrierText = await carrierResponse.text();
-
-      setProductCsvText(productText);
-      setCarrierCsvText(carrierText);
 
       const productRows = parseCsv(productText);
       const mappedProducts = mapProductRows(productRows);
@@ -325,40 +314,13 @@ export default function App() {
 
       setMessage("GitHub上のCSVを自動読み込みしました。");
     } catch {
-      setMessage("初期CSVの自動読み込みに失敗しました。手動読込も使えます。");
+      setMessage("初期CSVの自動読み込みに失敗しました。");
     }
   };
 
   useEffect(() => {
     loadInitialCsvFiles();
   }, []);
-
-  const readFileAsText = (file, onLoad) => {
-    const reader = new FileReader();
-    reader.onload = () => onLoad(typeof reader.result === "string" ? reader.result : "");
-    reader.onerror = () => setMessage("CSVファイルの読み込みでエラーが出ました。");
-    reader.readAsText(file, "utf-8");
-  };
-
-  const handleProductFileChange = (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-    readFileAsText(file, (text) => {
-      setProductCsvText(text);
-      setMessage(`商品マスタCSVを選択しました: ${file.name}`);
-    });
-    event.target.value = "";
-  };
-
-  const handleCarrierFileChange = (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-    readFileAsText(file, (text) => {
-      setCarrierCsvText(text);
-      setMessage(`運賃表CSVを選択しました: ${file.name}`);
-    });
-    event.target.value = "";
-  };
 
   const filteredProducts = useMemo(() => {
     const keyword = normalizeText(searchText);
@@ -418,40 +380,6 @@ export default function App() {
       .filter(Boolean);
   }, [matchedProduct, prefecture, carriers]);
 
-  const importProductsFromCsv = () => {
-    try {
-      const rows = parseCsv(productCsvText);
-      const mapped = mapProductRows(rows);
-
-      if (!mapped.length) {
-        setMessage("商品CSVの読み込みに失敗しました。ヘッダー名を確認してください。");
-        return;
-      }
-
-      setProducts(mapped);
-      setMessage(`商品マスタを ${mapped.length} 件読み込みました。`);
-    } catch {
-      setMessage("商品CSVの読み込みでエラーが出ました。");
-    }
-  };
-
-  const importCarriersFromCsv = () => {
-    try {
-      const rows = parseCsv(carrierCsvText);
-      const nextCarriers = mapCarrierRows(rows);
-
-      if (!Object.keys(nextCarriers).length) {
-        setMessage("運賃CSVの読み込みに失敗しました。ヘッダー名を確認してください。");
-        return;
-      }
-
-      setCarriers(nextCarriers);
-      setMessage(`運送会社マスタを ${Object.keys(nextCarriers).length} 社読み込みました。`);
-    } catch {
-      setMessage("運賃CSVの読み込みでエラーが出ました。");
-    }
-  };
-
   return (
     <>
       <style>{`
@@ -470,19 +398,13 @@ export default function App() {
         .card-body { padding: 14px 16px 16px; }
         .field { margin-bottom: 10px; }
         .label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; }
+        .field-head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+        .field-head-row .label { margin-bottom: 0; }
+        .clear-btn { border: 1px solid #cbd5e1; background: #fff; color: #0f172a; border-radius: 10px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+        .clear-btn:hover { background: #f8fafc; }
         .hint { margin-top: 6px; font-size: 11px; color: #64748b; }
-        .input, .select, .textarea { width: 100%; border: 1px solid #cbd5e1; background: #fff; border-radius: 12px; padding: 10px 12px; outline: none; }
-        .input, .select { height: 44px; }
+        .input, .select { width: 100%; border: 1px solid #cbd5e1; background: #fff; border-radius: 12px; padding: 10px 12px; outline: none; height: 44px; }
         .two-col { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        .candidate-hero { display: none; }
-        .muted { color: #64748b; font-size: 12px; }
-        .hero-topline { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
-        .badge { background: #eef2f7; color: #0f172a; padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-        .candidate-name { font-size: 17px; font-weight: 800; margin: 6px 0 4px; }
-        .mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .mini-card { background: #f8fafc; border-radius: 14px; padding: 12px; }
-        .mini-label { color: #64748b; font-size: 11px; margin-bottom: 4px; }
-        .mini-value { font-size: 16px; font-weight: 800; }
         .table-wrap { border: 1px solid #dbe4ee; border-radius: 16px; overflow: hidden; }
         .table-head, .table-row { display: grid; grid-template-columns: 110px 1.5fr 80px 80px 90px; gap: 0; align-items: start; }
         .table-head { background: #f1f5f9; font-size: 12px; font-weight: 800; }
@@ -492,42 +414,27 @@ export default function App() {
         .table-row { width: 100%; text-align: left; background: #fff; border: 0; cursor: pointer; font-size: 12px; }
         .table-row:hover { background: #f8fafc; }
         .empty-box { min-height: 150px; display: flex; align-items: center; justify-content: center; border: 1px dashed #cbd5e1; border-radius: 16px; color: #64748b; text-align: center; padding: 18px; font-size: 13px; }
-        .result-stack { display: grid; gap: 12px; }
-        .compact-result-stack { gap: 10px; }
+        .result-stack { display: grid; gap: 10px; }
         .hero-result { background: #0f172a; color: #fff; border-radius: 16px; padding: 14px 16px; }
-        .compact-hero-result { padding: 14px 16px; }
         .hero-label { color: #cbd5e1; font-size: 12px; }
         .hero-price { margin-top: 6px; font-size: 32px; font-weight: 800; line-height: 1.1; }
         .hero-sub { margin-top: 6px; color: #cbd5e1; font-size: 12px; }
-        .compare-wrap { border: 1px solid #dbe4ee; border-radius: 16px; overflow: hidden; background: #fff; }
-        .compact-compare-wrap { border-radius: 14px; }
+        .compare-wrap { border: 1px solid #dbe4ee; border-radius: 14px; overflow: hidden; background: #fff; }
         .compare-title { padding: 10px 12px; font-size: 14px; font-weight: 800; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
         .compare-table { overflow: auto; }
         .compare-head, .compare-row { display: grid; grid-template-columns: 60px 1.2fr 100px 90px 90px 100px; align-items: center; }
-        .compact-compare-head { font-size: 11px; }
         .compare-head { background: #f1f5f9; font-weight: 800; }
         .compare-head > div, .compare-row > div { padding: 8px 10px; border-top: 1px solid #e2e8f0; font-size: 12px; }
         .compare-head > div { border-top: 0; }
-        .compact-compare-row > div { padding: 8px 10px; }
         .compare-row.is-cheapest { background: #ecfdf5; }
         .min-badge { display: inline-block; margin-left: 6px; padding: 3px 7px; border-radius: 999px; background: #10b981; color: #fff; font-size: 10px; font-weight: 700; vertical-align: middle; }
         .total-cell { font-weight: 800; }
         .note-box { border: 1px solid #fde68a; background: #fffbeb; color: #92400e; border-radius: 14px; padding: 10px 12px; display: grid; gap: 4px; font-size: 12px; }
-        .compact-note-box { padding: 10px 12px; }
         .note-title { display: flex; align-items: center; gap: 8px; font-weight: 800; }
-        .csv-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px; }
-        .textarea { min-height: 140px; resize: vertical; font-size: 12px; }
-        .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-        .btn { border: 0; border-radius: 12px; padding: 10px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; }
-        .btn-primary { background: #0f172a; color: #fff; }
-        .btn-secondary { background: #fff; color: #0f172a; border: 1px solid #cbd5e1; }
-        .header-box { border: 1px solid #dbe4ee; background: #f8fafc; border-radius: 16px; padding: 14px; color: #334155; line-height: 1.7; font-size: 12px; }
-        .header-box-title { display: flex; gap: 8px; align-items: center; font-weight: 800; margin-bottom: 8px; }
-        @media (max-width: 1100px) { .grid-top, .csv-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1100px) { .grid-top { grid-template-columns: 1fr; } }
         @media (max-width: 820px) {
           .page { padding: 14px; }
           .title { font-size: 24px; }
-          .mini-grid { grid-template-columns: 1fr; }
           .compare-head, .compare-row { grid-template-columns: 60px 150px 90px 80px 80px 90px; }
         }
       `}</style>
@@ -542,7 +449,10 @@ export default function App() {
             <div className="card-head"><div className="card-title"><Search size={20} /> 検索条件</div></div>
             <div className="card-body">
               <div className="field">
-                <label className="label">品番または品名</label>
+                <div className="field-head-row">
+                  <label className="label">品番または品名</label>
+                  <button type="button" className="clear-btn" onClick={() => setSearchText("")}>クリア</button>
+                </div>
                 <input className="input" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="例: 5145800 / バンドソー / TY-200" />
                 <div className="hint">部分一致のあいまい検索に対応しています。</div>
               </div>
@@ -592,53 +502,6 @@ export default function App() {
           <div className="card-head"><div className="card-title"><Truck size={20} /> 運賃結果</div></div>
           <div className="card-body">
             <FreightResultCard matchedProduct={matchedProduct} prefecture={prefecture} freightDetails={freightDetails} />
-          </div>
-        </div>
-
-        <div className="card" style={{ marginTop: 16 }}>
-          <div className="card-head"><div className="card-title">CSV一括登録</div></div>
-          <div className="card-body">
-            <div className="csv-grid">
-              <div>
-                <label className="label">商品マスタCSVを貼り付け</label>
-                <textarea className="textarea" value={productCsvText} onChange={(e) => setProductCsvText(e.target.value)} />
-                <div className="btn-row">
-                  <button type="button" className="btn btn-primary" onClick={() => productFileInputRef.current && productFileInputRef.current.click()}>
-                    <Upload size={14} /> 商品マスタCSVファイルを取り込む
-                  </button>
-                  <button type="button" className="btn btn-secondary" onClick={importProductsFromCsv}>商品マスタを読み込む</button>
-                  <input ref={productFileInputRef} type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={handleProductFileChange} />
-                </div>
-                <div className="hint">GitHub上の `public/products.csv` を更新すれば、再デプロイ後に自動反映されます。</div>
-              </div>
-              <div className="header-box">
-                <div className="header-box-title"><Package size={14} /> 対応ヘッダー</div>
-                <div>code, name, standardSize, actualWeight, cubicWeight, carrier1, carrier2, carrier3</div>
-                <div style={{ marginTop: 8 }}>または</div>
-                <div>品番, 品名, 基準サイズ または 基準, 実重量, m3重量, 運送便①, 運送便②, 運送便③</div>
-              </div>
-            </div>
-
-            <div className="csv-grid" style={{ marginTop: 18 }}>
-              <div>
-                <label className="label">運賃表CSVを貼り付け</label>
-                <textarea className="textarea" value={carrierCsvText} onChange={(e) => setCarrierCsvText(e.target.value)} />
-                <div className="btn-row">
-                  <button type="button" className="btn btn-primary" onClick={() => carrierFileInputRef.current && carrierFileInputRef.current.click()}>
-                    <Upload size={14} /> 運賃表CSVファイルを取り込む
-                  </button>
-                  <button type="button" className="btn btn-secondary" onClick={importCarriersFromCsv}>運賃表を読み込む</button>
-                  <input ref={carrierFileInputRef} type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={handleCarrierFileChange} />
-                </div>
-                <div className="hint">GitHub上の `public/carriers.csv` を更新すれば、再デプロイ後に自動反映されます。</div>
-              </div>
-              <div className="header-box">
-                <div className="header-box-title"><Package size={14} /> 対応ヘッダー</div>
-                <div>carrier, size, weight, region, price, islandSurcharge, relaySurcharge</div>
-                <div style={{ marginTop: 8 }}>または</div>
-                <div>運送会社, サイズ, 重量, 地域, 運賃, 離島加算, 中継料</div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

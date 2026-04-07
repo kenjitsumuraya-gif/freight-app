@@ -11,4 +11,4 @@ npm run dev
 2. Vercelで New Project
 3. GitHubリポジトリを選択
 4. Deploy
-fix
+update

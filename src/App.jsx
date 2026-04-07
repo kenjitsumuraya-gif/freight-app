@@ -216,6 +216,10 @@ function mapCarrierRows(carrierRows) {
   return nextCarriers;
 }
 
+function makeProductKey(product) {
+  return `${product.code}__${product.name}__${product.standardSize}__${product.actualWeight ?? ""}__${product.cubicWeight ?? ""}`;
+}
+
 function FreightResultCard({ matchedProduct, prefecture, freightDetails }) {
   if (!matchedProduct || !prefecture || !freightDetails.length) {
     return <div className="empty-box">品番か商品名を入れて、都道府県を選ぶとここに運賃が出ます。</div>;
@@ -282,6 +286,7 @@ export default function App() {
   const [carriers, setCarriers] = useState(defaultCarriers);
   const [searchText, setSearchText] = useState("");
   const [prefecture, setPrefecture] = useState("");
+  const [selectedProductKey, setSelectedProductKey] = useState("");
   const [message, setMessage] = useState("");
 
   const loadInitialCsvFiles = async () => {
@@ -365,11 +370,36 @@ export default function App() {
     }
   }, [searchText, products]);
 
+  useEffect(() => {
+    if (!searchText.trim()) {
+      setSelectedProductKey("");
+      return;
+    }
+
+    const stillExists = filteredProducts.some((product) => makeProductKey(product) === selectedProductKey);
+    if (!stillExists) {
+      setSelectedProductKey("");
+    }
+  }, [searchText, filteredProducts, selectedProductKey]);
+
   const matchedProduct = useMemo(() => {
     if (!searchText.trim()) return null;
-    const exact = products.find((product) => product.code === searchText.trim());
-    return exact || filteredProducts[0] || null;
-  }, [products, searchText, filteredProducts]);
+
+    if (selectedProductKey) {
+      return products.find((product) => makeProductKey(product) === selectedProductKey) || null;
+    }
+
+    if (filteredProducts.length === 1) {
+      return filteredProducts[0];
+    }
+
+    const exactCodeMatches = products.filter((product) => product.code === searchText.trim());
+    if (exactCodeMatches.length === 1) {
+      return exactCodeMatches[0];
+    }
+
+    return null;
+  }, [products, searchText, filteredProducts, selectedProductKey]);
 
   const freightDetails = useMemo(() => {
     if (!matchedProduct || !prefecture) return [];
@@ -402,6 +432,8 @@ export default function App() {
         .field-head-row .label { margin-bottom: 0; }
         .clear-btn { border: 1px solid #cbd5e1; background: #fff; color: #0f172a; border-radius: 10px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
         .clear-btn:hover { background: #f8fafc; }
+        .duplicate-note { margin-top: 8px; }
+        .selected-row { background: #eff6ff !important; }
         .hint { margin-top: 6px; font-size: 11px; color: #64748b; }
         .input, .select { width: 100%; border: 1px solid #cbd5e1; background: #fff; border-radius: 12px; padding: 10px 12px; outline: none; height: 44px; }
         .two-col { display: grid; grid-template-columns: 1fr; gap: 10px; }
@@ -451,7 +483,7 @@ export default function App() {
               <div className="field">
                 <div className="field-head-row">
                   <label className="label">品番または品名</label>
-                  <button type="button" className="clear-btn" onClick={() => setSearchText("")}>クリア</button>
+                  <button type="button" className="clear-btn" onClick={() => { setSearchText(""); setSelectedProductKey(""); }}>クリア</button>
                 </div>
                 <input className="input" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="例: 5145800 / バンドソー / TY-200" />
                 <div className="hint">部分一致のあいまい検索に対応しています。</div>
@@ -467,7 +499,8 @@ export default function App() {
                 </div>
               </div>
 
-              {searchText.trim() && !matchedProduct ? <div className="note-box">一致する商品が見つかっていません。</div> : null}
+              {searchText.trim() && !matchedProduct && filteredProducts.length > 0 ? <div className="note-box duplicate-note">同一品番や近い候補が複数あります。右の候補一覧から選んでください。</div> : null}
+              {searchText.trim() && filteredProducts.length === 0 ? <div className="note-box">一致する商品が見つかっていません。</div> : null}
             </div>
           </div>
 
@@ -483,15 +516,19 @@ export default function App() {
                   <div>m³重量</div>
                 </div>
                 <div ref={candidateListRef} className="candidate-list">
-                  {filteredProducts.map((product) => (
-                    <button key={`${product.code}-${product.name}`} type="button" className="table-row" onClick={() => setSearchText(product.code)}>
+                  {filteredProducts.map((product) => {
+                    const productKey = makeProductKey(product);
+                    const isSelected = matchedProduct && makeProductKey(matchedProduct) === productKey;
+                    return (
+                    <button key={productKey} type="button" className={`table-row ${isSelected ? "selected-row" : ""}`} onClick={() => { setSearchText(product.code); setSelectedProductKey(productKey); }}>
                       <div><strong>{product.code}</strong></div>
                       <div>{product.name}</div>
                       <div>{product.standardSize}</div>
                       <div>{product.actualWeight ?? "-"}</div>
                       <div>{product.cubicWeight ?? "-"}</div>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

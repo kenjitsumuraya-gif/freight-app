@@ -22,12 +22,12 @@ function App() {
         setLoading(true);
         setError("");
 
-        const [p, c, r, s] = await Promise.all([
-          loadCsv("/products.csv"),
-          loadCsv("/carriers_final_complete.csv"),
-          loadCsv("/carrier_regions.csv"),
-          loadCsv("/carriers_seino_special.csv"),
-        ]);
+       const [p, c, r, s] = await Promise.all([
+  loadCsv("/products.csv"),
+  loadCsv("/carriers.csv"),
+  loadCsv("/carrier_regions.csv"),
+  loadCsv("/carriers_seino.csv"),
+]);
 
         setProducts(p);
         setCarrierRates(c);

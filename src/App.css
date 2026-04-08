@@ -1,0 +1,112 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #f7f7f7;
+}
+
+.app {
+  padding: 16px;
+  min-height: 100vh;
+}
+
+.page-title {
+  margin: 0 0 12px 0;
+  font-size: 24px;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 1fr 180px 100px;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.toolbar input,
+.toolbar select,
+.toolbar button {
+  height: 40px;
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.info-message {
+  margin: 8px 0;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.error-message {
+  margin: 8px 0;
+  padding: 10px;
+  background: #fff1f1;
+  border: 1px solid #e0b4b4;
+  color: #b00020;
+  border-radius: 8px;
+}
+
+.candidate-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.candidate-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.candidate-code {
+  font-weight: bold;
+  min-width: 100px;
+}
+
+.candidate-name {
+  color: #333;
+}
+
+.selected-product {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.table-wrap {
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+th,
+td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+th {
+  background: #fafafa;
+}

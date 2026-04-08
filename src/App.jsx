@@ -10,7 +10,7 @@ function App() {
   const [specialSeinoRates, setSpecialSeinoRates] = useState([]);
 
   const [keyword, setKeyword] = useState("");
-  const [prefecture, setPrefecture] = useState("高知県");
+  const [prefecture, setPrefecture] = useState("愛媛県");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +59,8 @@ function App() {
         setSpecialSeinoRates(s);
 
         console.log("products first row", p[0]);
-        console.log("products headers", p[0] ? Object.keys(p[0]) : []);
+        console.log("carriers first row", c[0]);
+        console.log("carrier regions first row", r[0]);
       } catch (err) {
         console.error(err);
         setError(`CSVの読み込みに失敗しました: ${err.message}`);
@@ -73,13 +74,16 @@ function App() {
 
   const candidates = useMemo(() => {
     const q = keyword.trim().toLowerCase();
-    if (!q) return [];
 
-    return products.filter((item) => {
-      const code = String(getProductCode(item)).toLowerCase();
-      const name = String(getProductName(item)).toLowerCase();
-      return code.includes(q) || name.includes(q);
-    });
+    const base = !q
+      ? products
+      : products.filter((item) => {
+          const code = String(getProductCode(item)).toLowerCase();
+          const name = String(getProductName(item)).toLowerCase();
+          return code.includes(q) || name.includes(q);
+        });
+
+    return base.slice(0, 30);
   }, [keyword, products]);
 
   useEffect(() => {
@@ -174,7 +178,7 @@ function App() {
               />
 
               <div className="field-help">
-                部分一致のあいまい検索に対応しています。
+                空欄でも一覧表示します。入力すると絞り込みます。
               </div>
             </div>
 
@@ -211,20 +215,14 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {keyword.trim() === "" ? (
-                    <tr>
-                      <td colSpan={5} className="empty-cell">
-                        検索条件を入力してください
-                      </td>
-                    </tr>
-                  ) : candidates.length === 0 ? (
+                  {candidates.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="empty-cell">
                         候補が見つかりません
                       </td>
                     </tr>
                   ) : (
-                    candidates.slice(0, 12).map((item, index) => {
+                    candidates.map((item, index) => {
                       const isActive =
                         selectedProduct &&
                         getProductCode(selectedProduct) === getProductCode(item) &&
@@ -237,8 +235,12 @@ function App() {
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => handleSelectProduct(item)}
                         >
-                          <td className="candidate-code-cell">{getProductCode(item) || "-"}</td>
-                          <td className="candidate-name-cell">{getProductName(item) || "-"}</td>
+                          <td className="candidate-code-cell">
+                            {getProductCode(item) || "-"}
+                          </td>
+                          <td className="candidate-name-cell">
+                            {getProductName(item) || "-"}
+                          </td>
                           <td>{getBaseSize(item) || "-"}</td>
                           <td>{getActualWeight(item) || "-"}</td>
                           <td>{getVolumeWeight(item) || "-"}</td>

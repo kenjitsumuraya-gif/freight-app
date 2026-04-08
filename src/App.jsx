@@ -16,34 +16,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function init() {
-      try {
-        setLoading(true);
-        setError("");
-
-       const [p, c, r, s] = await Promise.all([
-  loadCsv("/products.csv"),
-  loadCsv("/carriers.csv"),
-  loadCsv("/carrier_regions.csv"),
-  loadCsv("/carriers_seino.csv"),
-]);
-
-        setProducts(p);
-        setCarrierRates(c);
-        setCarrierRegions(r);
-        setSpecialSeinoRates(s);
-      } catch (err) {
-        console.error(err);
-        setError("CSVの読み込みに失敗しました。public フォルダ内のファイルを確認してください。");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    init();
-  }, []);
-
   const prefectures = [
     "北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県",
     "茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県",
@@ -55,13 +27,57 @@ function App() {
     "福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県",
   ];
 
+  const getProductName = (item) =>
+    item?.["品名"] || item?.["商品名"] || item?.["製品名"] || "";
+
+  const getProductCode = (item) =>
+    item?.["品番"] || item?.["商品コード"] || item?.["品番コード"] || "";
+
+  const getBaseSize = (item) =>
+    item?.["基準サイズ"] || item?.["基準"] || "";
+
+  const getActualWeight = (item) =>
+    item?.["実重量"] || item?.["重量"] || "";
+
+  const getVolumeWeight = (item) =>
+    item?.["m3重量"] || item?.["m³重量"] || "";
+
+  useEffect(() => {
+    async function init() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const p = await loadCsv("/products.csv");
+        const c = await loadCsv("/carriers.csv");
+        const r = await loadCsv("/carrier_regions.csv");
+        const s = await loadCsv("/carriers_seino.csv");
+
+        setProducts(p);
+        setCarrierRates(c);
+        setCarrierRegions(r);
+        setSpecialSeinoRates(s);
+
+        console.log("products first row", p[0]);
+        console.log("products headers", p[0] ? Object.keys(p[0]) : []);
+      } catch (err) {
+        console.error(err);
+        setError(`CSVの読み込みに失敗しました: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    init();
+  }, []);
+
   const candidates = useMemo(() => {
     const q = keyword.trim().toLowerCase();
     if (!q) return [];
 
     return products.filter((item) => {
-      const code = String(item["品番"] || "").toLowerCase();
-      const name = String(item["品名"] || "").toLowerCase();
+      const code = String(getProductCode(item)).toLowerCase();
+      const name = String(getProductName(item)).toLowerCase();
       return code.includes(q) || name.includes(q);
     });
   }, [keyword, products]);
@@ -208,23 +224,24 @@ function App() {
                       </td>
                     </tr>
                   ) : (
-                    candidates.slice(0, 8).map((item, index) => {
+                    candidates.slice(0, 12).map((item, index) => {
                       const isActive =
                         selectedProduct &&
-                        selectedProduct["品番"] === item["品番"] &&
-                        selectedProduct["品名"] === item["品名"];
+                        getProductCode(selectedProduct) === getProductCode(item) &&
+                        getProductName(selectedProduct) === getProductName(item);
 
                       return (
                         <tr
-                          key={`${item["品番"] || "no-code"}-${index}`}
+                          key={`${getProductCode(item) || "no-code"}-${index}`}
                           className={`candidate-row ${isActive ? "active" : ""}`}
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => handleSelectProduct(item)}
                         >
-                          <td className="candidate-code-cell">{item["品番"]}</td>
-                          <td className="candidate-name-cell">{item["品名"]}</td>
-                          <td>{item["基準サイズ"] || "-"}</td>
-                          <td>{item["実重量"] || "-"}</td>
-                          <td>{item["m3重量"] || item["m³重量"] || "-"}</td>
+                          <td className="candidate-code-cell">{getProductCode(item) || "-"}</td>
+                          <td className="candidate-name-cell">{getProductName(item) || "-"}</td>
+                          <td>{getBaseSize(item) || "-"}</td>
+                          <td>{getActualWeight(item) || "-"}</td>
+                          <td>{getVolumeWeight(item) || "-"}</td>
                         </tr>
                       );
                     })
@@ -260,8 +277,8 @@ function App() {
                   <div className="best-price-meta">
                     {bestResult["運送会社"]} / {prefecture} / {bestResult["地域"]} /{" "}
                     {bestResult["運送会社"] === "西濃"
-                      ? `重量 ${bestResult["適用重量"]}`
-                      : `サイズ ${bestResult["適用サイズ"]}`}
+                      ? `重量 ${bestResult["適用重量"] || "-"}`
+                      : `サイズ ${bestResult["適用サイズ"] || "-"}`}
                   </div>
                 </div>
               )}
@@ -303,7 +320,7 @@ function App() {
 
               <div className="selected-product-note">
                 <span className="selected-label">選択商品:</span>{" "}
-                {selectedProduct["品番"]} / {selectedProduct["品名"]}
+                {getProductCode(selectedProduct)} / {getProductName(selectedProduct)}
                 {" / "}
                 西濃別表
                 {selectedProduct["西濃別表"] === "1" ? " 対象" : " 通常"}

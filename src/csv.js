@@ -5,14 +5,18 @@ export async function loadCsv(path) {
   }
 
   const text = await res.text();
-  const lines = text
+  const cleaned = text.replace(/^\uFEFF/, "");
+
+  const lines = cleaned
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
   if (lines.length === 0) return [];
 
-  const headers = lines[0].split(",").map((h) => h.trim());
+  const headers = lines[0]
+    .split(",")
+    .map((h) => h.trim().replace(/^\uFEFF/, ""));
 
   return lines.slice(1).map((line) => {
     const values = line.split(",").map((v) => v.trim());

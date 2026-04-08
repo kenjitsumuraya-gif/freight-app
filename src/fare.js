@@ -51,7 +51,7 @@ function getCarrierRegion(carrier, prefecture, carrierRegions) {
 }
 
 function isSeinoSpecial(product) {
-  return String(getValue(product, ["西濃別表"] ) || "0").trim() === "1";
+  return String(getValue(product, ["西濃別表"]) || "0").trim() === "1";
 }
 
 function findSeinoRate(region, weight, rateTable) {
@@ -123,19 +123,20 @@ function calculateFareByCarrier(
   const normalizedCarrier = normalizeCarrierName(carrier);
   if (!normalizedCarrier) return null;
 
-  const region = getCarrierRegion(normalizedCarrier, prefecture, carrierRegions);
+  let region = getCarrierRegion(normalizedCarrier, prefecture, carrierRegions);
   if (!region) return null;
 
   const size = getValue(product, ["基準サイズ", "基準"]);
   const weight = getShippingWeight(product);
-if (normalizedCarrier === "西濃") {
-  const regionNum = Number(region);
 
-  if (weight >= 200) {
-    // 100単位で切り上げ
-    region = Math.ceil(regionNum / 100) * 100;
+  if (normalizedCarrier === "西濃") {
+    const regionNum = Number(region);
+
+    if (!Number.isNaN(regionNum) && weight >= 200) {
+      region = String(Math.ceil(regionNum / 100) * 100);
+    }
   }
-}
+
   let rateRow = null;
 
   if (normalizedCarrier === "西濃") {

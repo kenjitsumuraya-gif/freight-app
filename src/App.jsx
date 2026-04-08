@@ -131,18 +131,7 @@ function App() {
       <div className="page-container">
         <header className="page-header">
           <h1 className="page-title">品番・品名から運賃を調べるアプリ</h1>
-          <p className="page-description">
-            品番の完全一致だけでなく、品名や品番の部分一致でも検索できます。商品CSVの運送便①〜③を見て候補運賃を表示します。
-          </p>
         </header>
-
-        <div className="status-banner">
-          {loading
-            ? "GitHub上のCSVを読み込み中です。"
-            : error
-            ? error
-            : "GitHub上のCSVを自動読み込みしました。"}
-        </div>
 
         <section className="top-grid">
           <div className="panel search-panel">

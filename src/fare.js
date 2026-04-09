@@ -197,3 +197,14 @@ export function buildFareResults(
     .filter(Boolean)
     .sort((a, b) => a["合計"] - b["合計"]);
 }
+function isKyushu(prefecture) {
+  return [
+    "福岡県",
+    "佐賀県",
+    "長崎県",
+    "熊本県",
+    "大分県",
+    "宮崎県",
+    "鹿児島県",
+  ].includes(String(prefecture).trim());
+}

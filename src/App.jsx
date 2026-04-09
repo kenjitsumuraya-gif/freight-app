@@ -1,504 +1,453 @@
-:root {
-  --bg: #f5f7fb;
-  --card: #ffffff;
-  --card-border: #dbe4f0;
-  --text: #0d2b66;
-  --muted: #7d8ca5;
-  --line: #dce5f2;
-  --head: #e8eff8;
-  --primary: #113a7b;
-  --primary-soft: #eef4ff;
-  --primary-border: #b9cdf3;
-  --best-bg: #0d2b66;
-  --best-text: #ffffff;
-  --badge-bg: #fff1bf;
-  --badge-text: #7a5600;
-  --selected-row: #eaf2ff;
-  --selected-row-strong: #dbe9ff;
-  --cheapest-row: #f5f8ff;
-  --shadow: 0 8px 24px rgba(16, 42, 88, 0.05);
-  --radius-lg: 26px;
-  --radius-md: 18px;
-  --radius-sm: 12px;
+import { useEffect, useMemo, useState } from "react";
+import "./App.css";
+import { loadCsv } from "./csv.js";
+import { buildFareResults } from "./fare.js";
+
+const PREFECTURES = [
+  "北海道",
+  "青森県",
+  "岩手県",
+  "宮城県",
+  "秋田県",
+  "山形県",
+  "福島県",
+  "茨城県",
+  "栃木県",
+  "群馬県",
+  "埼玉県",
+  "千葉県",
+  "東京都",
+  "神奈川県",
+  "新潟県",
+  "富山県",
+  "石川県",
+  "福井県",
+  "山梨県",
+  "長野県",
+  "岐阜県",
+  "静岡県",
+  "愛知県",
+  "三重県",
+  "滋賀県",
+  "京都府",
+  "大阪府",
+  "兵庫県",
+  "奈良県",
+  "和歌山県",
+  "鳥取県",
+  "島根県",
+  "岡山県",
+  "広島県",
+  "山口県",
+  "徳島県",
+  "香川県",
+  "愛媛県",
+  "高知県",
+  "福岡県",
+  "佐賀県",
+  "長崎県",
+  "熊本県",
+  "大分県",
+  "宮崎県",
+  "鹿児島県",
+  "沖縄県",
+];
+
+function toStr(value) {
+  return value == null ? "" : String(value).trim();
 }
 
-* {
-  box-sizing: border-box;
+function toNumber(value) {
+  if (value == null || value === "") return 0;
+  const normalized = String(value).replace(/,/g, "").trim();
+  const num = Number(normalized);
+  return Number.isFinite(num) ? num : 0;
 }
 
-html,
-body,
-#root {
-  margin: 0;
-  min-height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family:
-    "Hiragino Sans",
-    "Yu Gothic",
-    "Meiryo",
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+function formatYen(value) {
+  const num = toNumber(value);
+  return `¥${num.toLocaleString("ja-JP")}`;
 }
 
-body {
-  line-height: 1.5;
+function getProductKey(product) {
+  return `${toStr(product?.["品番"])}__${toStr(product?.["品名"])}`;
 }
 
-button,
-input,
-select {
-  font: inherit;
+function getCalcTypeLabel(row) {
+  if (row?.calcType === "weight") return "重量";
+  if (row?.calcType === "size") return "サイズ";
+  return "-";
 }
 
-.app-shell {
-  width: 100%;
-  max-width: 1700px;
-  margin: 0 auto;
-  padding: 10px 20px 18px;
+function getReferenceValueLabel(row) {
+  if (row?.calcType === "weight") {
+    return row?.matchedWeight ? `${row.matchedWeight}` : `${row.chargeableWeight || 0}`;
+  }
+  if (row?.calcType === "size") {
+    return row?.matchedSize ? `${row.matchedSize}` : `${row.size || 0}`;
+  }
+  return "-";
 }
 
-.page-header {
-  margin-bottom: 8px;
-}
+export default function App() {
+  const [products, setProducts] = useState([]);
+  const [carrierRegions, setCarrierRegions] = useState([]);
+  const [carriers, setCarriers] = useState([]);
+  const [carriersSeino, setCarriersSeino] = useState([]);
 
-.page-title {
-  margin: 0;
-  font-size: 1.85rem;
-  line-height: 1.15;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  color: #0b2a67;
-}
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
-.page-subtitle {
-  margin: 8px 0 0;
-  font-size: 0.96rem;
-  color: var(--muted);
-}
+  const [searchText, setSearchText] = useState("");
+  const [prefecture, setPrefecture] = useState("愛媛県");
+  const [selectedProductKey, setSelectedProductKey] = useState("");
 
-.layout-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
+  useEffect(() => {
+    let cancelled = false;
 
-.top-grid {
-  display: grid;
-  grid-template-columns: 1.02fr 0.98fr;
-  gap: 16px;
-  align-items: stretch;
-}
+    async function fetchAllCsv() {
+      try {
+        setLoading(true);
+        setLoadError("");
 
-.card {
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
-}
+        const [productsData, carrierRegionsData, carriersData, carriersSeinoData] =
+          await Promise.all([
+            loadCsv("/products.csv"),
+            loadCsv("/carrier_regions.csv"),
+            loadCsv("/carriers.csv"),
+            loadCsv("/carriers_seino.csv"),
+          ]);
 
-.panel-card {
-  min-height: 430px;
-  padding: 16px 18px;
-}
+        if (cancelled) return;
 
-.result-card {
-  padding: 16px 18px 18px;
-}
+        setProducts(Array.isArray(productsData) ? productsData : []);
+        setCarrierRegions(Array.isArray(carrierRegionsData) ? carrierRegionsData : []);
+        setCarriers(Array.isArray(carriersData) ? carriersData : []);
+        setCarriersSeino(Array.isArray(carriersSeinoData) ? carriersSeinoData : []);
+      } catch (error) {
+        if (cancelled) return;
+        setLoadError("CSVの読み込みに失敗しました。ファイル名と配置を確認してください。");
+        console.error(error);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
 
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
+    fetchAllCsv();
 
-.card-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #0b2a67;
-}
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-.card-title-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  text-align: center;
-}
+  const filteredProducts = useMemo(() => {
+    const keyword = toStr(searchText).toLowerCase();
 
-.form-block {
-  margin-bottom: 18px;
-}
+    const sorted = [...products].sort((a, b) => {
+      const aCode = toStr(a["品番"]);
+      const bCode = toStr(b["品番"]);
+      return aCode.localeCompare(bCode, "ja");
+    });
 
-.field-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
+    if (!keyword) {
+      return sorted.slice(0, 100);
+    }
 
-.field-label {
-  display: inline-block;
-  margin-bottom: 8px;
-  font-size: 0.98rem;
-  font-weight: 700;
-  color: #0b2a67;
-}
+    return sorted.filter((product) => {
+      const code = toStr(product["品番"]).toLowerCase();
+      const name = toStr(product["品名"]).toLowerCase();
+      return code.includes(keyword) || name.includes(keyword);
+    });
+  }, [products, searchText]);
 
-.field-row .field-label {
-  margin-bottom: 0;
-}
+  const selectedProduct = useMemo(() => {
+    if (!selectedProductKey) return null;
 
-.field-help {
-  margin: 8px 0 0;
-  font-size: 0.92rem;
-  color: #98a6bf;
-}
+    return (
+      filteredProducts.find((product) => getProductKey(product) === selectedProductKey) ||
+      products.find((product) => getProductKey(product) === selectedProductKey) ||
+      null
+    );
+  }, [filteredProducts, products, selectedProductKey]);
 
-.text-input,
-.select-input {
-  width: 100%;
-  height: 68px;
-  padding: 0 22px;
-  border-radius: 22px;
-  border: 1.5px solid #c8d4e8;
-  background: #ffffff;
-  outline: none;
-  font-size: 0.98rem;
-  color: var(--text);
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease;
-}
+  const fareResults = useMemo(() => {
+    if (!selectedProduct || !prefecture) return [];
 
-.text-input::placeholder {
-  color: #a4b0c3;
-}
+    try {
+      return buildFareResults({
+        product: selectedProduct,
+        prefecture,
+        carrierRegions,
+        carriers,
+        carriersSeino,
+      });
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  }, [selectedProduct, prefecture, carrierRegions, carriers, carriersSeino]);
 
-.text-input:focus,
-.select-input:focus {
-  border-color: #9ebcf0;
-  box-shadow: 0 0 0 4px rgba(92, 136, 219, 0.12);
-}
+  const bestResult = fareResults.length > 0 ? fareResults[0] : null;
 
-.select-input {
-  appearance: auto;
-  cursor: pointer;
-}
-
-.clear-button {
-  min-width: 100px;
-  height: 58px;
-  padding: 0 20px;
-  border: 1.5px solid #c7d3e5;
-  border-radius: 20px;
-  background: #ffffff;
-  color: #143975;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    transform 0.18s ease;
-}
-
-.clear-button:hover {
-  background: #f7faff;
-  border-color: #b4c7e5;
-}
-
-.clear-button:active {
-  transform: translateY(1px);
-}
-
-.candidate-table-wrap {
-  height: 250px;
-  overflow: auto;
-  border-radius: 22px;
-}
-
-.table-scroll {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: auto;
-  border-radius: 22px;
-}
-
-.candidate-table {
-  min-width: 720px;
-}
-
-.result-table {
-  min-width: 1100px;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  overflow: hidden;
-}
-
-.data-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--head);
-  color: #0d2b66;
-  font-weight: 800;
-  text-align: left;
-  font-size: 0.96rem;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
-
-.data-table thead th:first-child {
-  border-top-left-radius: 22px;
-}
-
-.data-table thead th:last-child {
-  border-top-right-radius: 22px;
-}
-
-.data-table tbody td {
-  padding: 16px 18px;
-  border-bottom: 1px solid #e3ebf6;
-  background: #ffffff;
-  color: #163466;
-  white-space: nowrap;
-  vertical-align: middle;
-}
-
-.data-table tbody tr:last-child td:first-child {
-  border-bottom-left-radius: 22px;
-}
-
-.data-table tbody tr:last-child td:last-child {
-  border-bottom-right-radius: 22px;
-}
-
-.candidate-table tbody tr {
-  cursor: pointer;
-  transition:
-    background 0.16s ease,
-    box-shadow 0.16s ease;
-}
-
-.candidate-table tbody tr:hover td {
-  background: #f7faff;
-}
-
-.candidate-table tbody tr.is-selected td {
-  background: var(--selected-row);
-  color: #0c2f6a;
-  font-weight: 700;
-}
-
-.candidate-table tbody tr.is-selected td:first-child {
-  box-shadow: inset 4px 0 0 #6f9df0;
-}
-
-.candidate-table tbody tr.is-selected:hover td {
-  background: var(--selected-row-strong);
-}
-
-.result-table tbody tr.is-cheapest td {
-  background: var(--cheapest-row);
-}
-
-.total-cell {
-  font-weight: 800;
-  color: #0b2a67;
-}
-
-.empty-cell {
-  text-align: center;
-  color: var(--muted);
-  background: #ffffff;
-}
-
-.result-placeholder {
-  min-height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 18px 20px;
-  border: 1px dashed #d4dfef;
-  border-radius: 22px;
-  background: #fbfdff;
-  color: var(--muted);
-  font-size: 0.98rem;
-}
-
-.best-fare-card {
-  background: linear-gradient(180deg, #08245b 0%, #0d2d70 100%);
-  color: var(--best-text);
-  border-radius: 28px;
-  padding: 18px 22px;
-  margin-bottom: 14px;
-}
-
-.best-fare-label {
-  font-size: 0.96rem;
-  opacity: 0.92;
-  margin-bottom: 6px;
-}
-
-.best-fare-price {
-  font-size: 2.45rem;
-  line-height: 1.08;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  margin-bottom: 10px;
-}
-
-.best-fare-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.best-fare-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 5px 11px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  font-size: 0.9rem;
-}
-
-.selected-product-summary {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.summary-row {
-  background: #f8fbff;
-  border: 1px solid #dbe5f2;
-  border-radius: 16px;
-  padding: 10px 12px;
-}
-
-.summary-label {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 0.83rem;
-  color: #7b8aa6;
-}
-
-.summary-value {
-  display: block;
-  font-size: 0.96rem;
-  font-weight: 700;
-  color: #12356c;
-  word-break: break-word;
-}
-
-.cheapest-badge,
-.normal-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 58px;
-  min-height: 30px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.86rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.cheapest-badge {
-  background: var(--badge-bg);
-  color: var(--badge-text);
-}
-
-.normal-badge {
-  background: #edf3fb;
-  color: #58719c;
-}
-
-@media (max-width: 1200px) {
-  .top-grid {
-    grid-template-columns: 1fr;
+  function handleClear() {
+    setSearchText("");
+    setSelectedProductKey("");
   }
 
-  .panel-card {
-    min-height: auto;
+  function handleSelectProduct(product) {
+    setSelectedProductKey(getProductKey(product));
   }
 
-  .candidate-table-wrap {
-    height: 280px;
+  function handleSearchChange(event) {
+    setSearchText(event.target.value);
+    setSelectedProductKey("");
   }
 
-  .selected-product-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
+  return (
+    <div className="app-shell">
+      <header className="page-header">
+        <h1 className="page-title">品番・品名から運賃を調べるアプリ</h1>
+        <p className="page-subtitle">
+          品番の完全一致だけでなく、品名や品番の部分一致でも検索できます。商品CSVの運送便①〜③を見て候補運賃を表示します。
+        </p>
+      </header>
 
-@media (max-width: 768px) {
-  .app-shell {
-    padding: 12px 14px 18px;
-  }
+      <main className="layout-stack">
+        <section className="top-grid">
+          <div className="card panel-card">
+            <div className="card-header">
+              <h2 className="card-title">
+                <span className="card-title-icon">⌕</span>
+                <span>検索条件</span>
+              </h2>
+            </div>
 
-  .page-title {
-    font-size: 1.65rem;
-  }
+            <div className="form-block">
+              <div className="field-row">
+                <label className="field-label" htmlFor="searchText">
+                  品番または品名
+                </label>
+                <button type="button" className="clear-button" onClick={handleClear}>
+                  クリア
+                </button>
+              </div>
 
-  .page-subtitle {
-    font-size: 0.93rem;
-  }
+              <input
+                id="searchText"
+                className="text-input"
+                type="text"
+                value={searchText}
+                onChange={handleSearchChange}
+                placeholder="品番または品名を入力"
+              />
 
-  .panel-card,
-  .result-card {
-    padding: 14px;
-    border-radius: 22px;
-  }
+              <p className="field-help">
+                空欄でも一覧表示します。入力すると絞り込みます。
+              </p>
+            </div>
 
-  .field-row {
-    align-items: flex-start;
-    flex-direction: column;
-  }
+            <div className="form-block">
+              <label className="field-label" htmlFor="prefecture">
+                送り先の都道府県
+              </label>
 
-  .clear-button {
-    width: 100%;
-  }
+              <select
+                id="prefecture"
+                className="select-input"
+                value={prefecture}
+                onChange={(e) => setPrefecture(e.target.value)}
+              >
+                {PREFECTURES.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-  .text-input,
-  .select-input {
-    height: 62px;
-    padding: 0 18px;
-    border-radius: 18px;
-  }
+          <div className="card panel-card">
+            <div className="card-header">
+              <h2 className="card-title">検索候補一覧</h2>
+            </div>
 
-  .candidate-table-wrap {
-    height: 240px;
-  }
+            <div className="candidate-table-wrap">
+              <div className="table-scroll">
+                <table className="data-table candidate-table">
+                  <thead>
+                    <tr>
+                      <th>品番</th>
+                      <th>品名</th>
+                      <th>基準</th>
+                      <th>実重量</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan="4" className="empty-cell">
+                          CSVを読み込み中です。
+                        </td>
+                      </tr>
+                    ) : loadError ? (
+                      <tr>
+                        <td colSpan="4" className="empty-cell">
+                          {loadError}
+                        </td>
+                      </tr>
+                    ) : filteredProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="empty-cell">
+                          該当する商品がありません。
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredProducts.map((product) => {
+                        const productKey = getProductKey(product);
+                        const isSelected = selectedProductKey === productKey;
 
-  .best-fare-price {
-    font-size: 2.05rem;
-  }
+                        return (
+                          <tr
+                            key={productKey}
+                            className={isSelected ? "is-selected" : ""}
+                            onClick={() => handleSelectProduct(product)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleSelectProduct(product);
+                              }
+                            }}
+                          >
+                            <td>{toStr(product["品番"])}</td>
+                            <td>{toStr(product["品名"])}</td>
+                            <td>{toStr(product["基準サイズ"])}</td>
+                            <td>{toStr(product["実重量"])}</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
 
-  .selected-product-summary {
-    grid-template-columns: 1fr;
-  }
+        <section className="card result-card">
+          <div className="card-header">
+            <h2 className="card-title">
+              <span className="card-title-icon">🚚</span>
+              <span>運賃結果</span>
+            </h2>
+          </div>
 
-  .data-table thead th,
-  .data-table tbody td {
-    padding: 13px 14px;
-  }
+          {!selectedProduct ? (
+            <div className="result-placeholder">
+              検索候補から商品を選択してください。
+            </div>
+          ) : fareResults.length === 0 ? (
+            <div className="result-placeholder">
+              運賃表に一致する候補がありません。
+            </div>
+          ) : (
+            <>
+              <div className="best-fare-card">
+                <div className="best-fare-label">最安候補</div>
+                <div className="best-fare-price">{formatYen(bestResult?.total)}</div>
+                <div className="best-fare-meta">
+                  <span className="best-fare-chip">{bestResult?.carrier}</span>
+                  <span className="best-fare-chip">{bestResult?.candidateLabel}</span>
+                  <span className="best-fare-chip">
+                    参照: {getCalcTypeLabel(bestResult)}
+                  </span>
+                  <span className="best-fare-chip">
+                    地域: {bestResult?.region || "-"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="selected-product-summary">
+                <div className="summary-row">
+                  <span className="summary-label">選択商品</span>
+                  <span className="summary-value">
+                    {toStr(selectedProduct["品番"])} / {toStr(selectedProduct["品名"])}
+                  </span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">基準サイズ</span>
+                  <span className="summary-value">
+                    {toStr(selectedProduct["基準サイズ"]) || "-"}
+                  </span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">実重量</span>
+                  <span className="summary-value">
+                    {toStr(selectedProduct["実重量"]) || "-"}
+                  </span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">m3重量</span>
+                  <span className="summary-value">
+                    {toStr(selectedProduct["m3重量"]) || "-"}
+                  </span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">送り先</span>
+                  <span className="summary-value">{prefecture}</span>
+                </div>
+              </div>
+
+              <div className="table-scroll">
+                <table className="data-table result-table">
+                  <thead>
+                    <tr>
+                      <th>運送会社</th>
+                      <th>候補元</th>
+                      <th>参照</th>
+                      <th>参照値</th>
+                      <th>地域</th>
+                      <th>運賃</th>
+                      <th>離島加算</th>
+                      <th>中継料</th>
+                      <th>合計</th>
+                      <th>状態</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fareResults.map((row, index) => (
+                      <tr
+                        key={`${row.carrier}-${row.source}-${index}`}
+                        className={row.isCheapest ? "is-cheapest" : ""}
+                      >
+                        <td>{row.carrier}</td>
+                        <td>{row.candidateLabel}</td>
+                        <td>{getCalcTypeLabel(row)}</td>
+                        <td>{getReferenceValueLabel(row)}</td>
+                        <td>{row.region || "-"}</td>
+                        <td>{formatYen(row.fare)}</td>
+                        <td>{formatYen(row.islandFee)}</td>
+                        <td>{formatYen(row.relayFee)}</td>
+                        <td className="total-cell">{formatYen(row.total)}</td>
+                        <td>
+                          {row.isCheapest ? (
+                            <span className="cheapest-badge">最安</span>
+                          ) : (
+                            <span className="normal-badge">候補</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </section>
+      </main>
+    </div>
+  );
 }

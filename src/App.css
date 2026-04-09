@@ -1,77 +1,459 @@
-body {
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f4f6fa;
+  --card: #ffffff;
+  --line: #d9e0ea;
+  --text: #0f172a;
+  --muted: #667085;
+  --navy: #07163a;
+  --soft-table: #edf2fa;
+}
+
+html,
+body,
+#root {
   margin: 0;
-  background: #f5f7fb;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  min-height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
 
-.app {
-  padding: 12px;
-  max-width: 1200px;
-  margin: 0 auto;
+body {
+  min-height: 100vh;
 }
 
-h1 {
-  font-size: 20px;
-  margin-bottom: 8px;
-}
-
-.container {
-  display: flex;
-  gap: 12px;
-}
-
-.card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 12px;
-  flex: 1;
-}
-
-.card h2 {
-  font-size: 14px;
-  margin-bottom: 6px;
-}
-
-input, select {
-  width: 100%;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  margin-bottom: 6px;
-  font-size: 13px;
+button,
+input,
+select {
+  font: inherit;
 }
 
 button {
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: none;
-  background: #e5e7eb;
   cursor: pointer;
-  font-size: 12px;
 }
 
-.table {
-  width: 100%;
-  font-size: 12px;
+.app-shell {
+  min-height: 100vh;
+  background: var(--bg);
 }
 
-.table th, .table td {
-  padding: 6px;
-  border-bottom: 1px solid #eee;
+.page-container {
+  width: min(100%, 1760px);
+  margin: 0 auto;
+  padding: 16px 20px 22px;
 }
 
-.result {
-  margin-top: 10px;
+.page-header {
+  margin-bottom: 10px;
 }
 
-.result-box {
-  background: #0f172a;
-  color: #fff;
-  padding: 12px;
-  border-radius: 12px;
+.page-title {
+  margin: 0 0 10px;
+  font-size: 34px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #0c1c45;
 }
 
-.result-price {
+.page-description {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.status-banner {
+  display: flex;
+  align-items: center;
+  min-height: 58px;
+  padding: 0 18px;
+  margin: 16px 0 18px;
+  border: 1px solid #cad5e4;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #25324b;
+  font-size: 18px;
+}
+
+.top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid #d8e0ec;
+  border-radius: 28px;
+  padding: 22px;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.03);
+}
+
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.panel-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
   font-size: 22px;
-  font-weight: bold;
+  color: #0e1e48;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0b163b;
+}
+
+.form-block + .form-block {
+  margin-top: 18px;
+}
+
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.field-label {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0d173d;
+}
+
+.with-button .field-label {
+  margin-bottom: 0;
+}
+
+.clear-button {
+  height: 52px;
+  padding: 0 22px;
+  border: 1px solid #c8d2df;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f8fc 100%);
+  color: #0f1d45;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.clear-button:hover {
+  background: #f7f9fd;
+}
+
+.text-input,
+.select-input {
+  width: 100%;
+  height: 64px;
+  padding: 0 18px;
+  border: 1px solid #cfd8e6;
+  border-radius: 20px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 20px;
+  outline: none;
+}
+
+.text-input::placeholder {
+  color: #98a2b3;
+}
+
+.text-input:focus,
+.select-input:focus {
+  border-color: #9eb6e6;
+  box-shadow: 0 0 0 4px rgba(84, 120, 255, 0.08);
+}
+
+.field-help {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #8893a7;
+}
+
+.candidate-table-wrap {
+  max-height: 440px;
+  overflow: auto;
+  border: 1px solid #d9e2ef;
+  border-radius: 22px;
+  background: var(--soft-table);
+}
+
+.candidate-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.candidate-table thead th {
+  padding: 16px 18px;
+  background: #dfe7f3;
+  color: #0c1c45;
+  font-size: 17px;
+  font-weight: 800;
+  text-align: left;
+  border-bottom: 1px solid #d4ddea;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.candidate-table thead th:first-child {
+  border-top-left-radius: 18px;
+}
+
+.candidate-table thead th:last-child {
+  border-top-right-radius: 18px;
+}
+
+.candidate-table tbody td {
+  padding: 15px 18px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #12203f;
+  border-bottom: 1px solid #dbe3ef;
+  background: rgba(255, 255, 255, 0.18);
+  vertical-align: top;
+}
+
+.candidate-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.candidate-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.candidate-row:hover td {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.candidate-row.active td {
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.candidate-code-cell {
+  font-weight: 800;
+}
+
+.candidate-name-cell {
+  word-break: break-word;
+}
+
+.empty-cell {
+  text-align: center;
+  color: #7b8798;
+  background: transparent;
+  padding: 28px 18px !important;
+}
+
+.results-section {
+  background: var(--card);
+  border: 1px solid #d8e0ec;
+  border-radius: 28px;
+  padding: 22px;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.03);
+}
+
+.section-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-size: 22px;
+}
+
+.section-heading {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0b163b;
+}
+
+.placeholder-card {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  padding: 22px;
+  border: 1px dashed #ccd5e2;
+  border-radius: 22px;
+  background: #fafcff;
+  color: #667085;
+  font-size: 17px;
+}
+
+.best-price-card {
+  margin-bottom: 18px;
+  padding: 22px 24px;
+  border-radius: 26px;
+  background: linear-gradient(90deg, var(--navy) 0%, #08183e 55%, #091a43 100%);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(6, 18, 51, 0.18);
+}
+
+.best-price-label {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.78);
+  margin-bottom: 10px;
+}
+
+.best-price-value {
+  font-size: 58px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  margin-bottom: 16px;
+}
+
+.best-price-meta {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.result-table-card {
+  overflow: auto;
+  border: 1px solid #d9e2ef;
+  border-radius: 22px;
+  background: #fff;
+}
+
+.result-table {
+  width: 100%;
+  min-width: 1100px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.result-table thead th {
+  padding: 16px 14px;
+  background: #f0f4fa;
+  color: #0c1c45;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+  border-bottom: 1px solid #d8e2ef;
+  white-space: nowrap;
+}
+
+.result-table tbody td {
+  padding: 15px 14px;
+  font-size: 15px;
+  color: #12203f;
+  text-align: center;
+  border-bottom: 1px solid #e9eef5;
+  background: #fff;
+  white-space: nowrap;
+}
+
+.result-table tbody tr:hover td {
+  background: #fafcff;
+}
+
+.result-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.total-cell {
+  font-weight: 800;
+  color: #0d1c45;
+}
+
+.selected-product-note {
+  margin-top: 14px;
+  font-size: 15px;
+  color: #4b5870;
+}
+
+.selected-label {
+  font-weight: 800;
+  color: #0d1c45;
+}
+
+@media (max-width: 1200px) {
+  .page-container {
+    padding: 14px 14px 24px;
+  }
+
+  .top-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .best-price-value {
+    font-size: 48px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 28px;
+  }
+
+  .page-description {
+    font-size: 15px;
+  }
+
+  .status-banner {
+    font-size: 16px;
+    min-height: 52px;
+  }
+
+  .panel,
+  .results-section {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .panel-title,
+  .section-heading {
+    font-size: 20px;
+  }
+
+  .text-input,
+  .select-input {
+    height: 52px;
+    font-size: 18px;
+  }
+
+  .best-price-value {
+    font-size: 40px;
+  }
+
+  .best-price-meta {
+    font-size: 15px;
+  }
 }

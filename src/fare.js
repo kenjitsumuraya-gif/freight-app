@@ -10,8 +10,31 @@ function normalizeCarrierName(name) {
   if (value.includes("佐川")) return "佐川";
   if (value.includes("西濃")) return "西濃";
   if (value.includes("ヤマト")) return "ヤマト";
+  if (value.includes("久留米")) return "久留米";
 
   return value;
+}
+
+function isKyushu(prefecture) {
+  return [
+    "福岡県",
+    "佐賀県",
+    "長崎県",
+    "熊本県",
+    "大分県",
+    "宮崎県",
+    "鹿児島県",
+  ].includes(String(prefecture).trim());
+}
+
+function resolveCarrierForArea(carrier, prefecture) {
+  const normalized = normalizeCarrierName(carrier);
+
+  if (normalized === "西濃" && isKyushu(prefecture)) {
+    return "久留米";
+  }
+
+  return normalized;
 }
 
 function getValue(obj, keys) {
@@ -54,15 +77,21 @@ function isSeinoSpecial(product) {
   return String(getValue(product, ["西濃別表"]) || "0").trim() === "1";
 }
 
-function findSeinoRate(region, weight, rateTable) {
+function normalizeSeinoRegion(region) {
+  const regionNum = Number(region);
+  if (Number.isNaN(regionNum)) return String(region).trim();
+  return String(Math.ceil(regionNum / 100) * 100);
+}
+
+function findWeightRate(carrier, region, weight, rateTable) {
   const rows = rateTable
     .filter((r) => {
-      const carrier = normalizeCarrierName(getValue(r, ["運送会社", "carrier"]));
+      const rowCarrier = normalizeCarrierName(getValue(r, ["運送会社", "carrier"]));
       const rowRegion = String(getValue(r, ["地域", "region", "距離帯"])).trim();
       const rowWeight = getValue(r, ["重量", "重量kg"]);
 
       return (
-        carrier === "西濃" &&
+        rowCarrier === carrier &&
         rowRegion === String(region).trim() &&
         String(rowWeight).trim() !== ""
       );
@@ -84,8 +113,6 @@ function findSeinoRate(region, weight, rateTable) {
 }
 
 function findStandardRate(carrier, region, size, carrierRates) {
-  const normalizedCarrier = normalizeCarrierName(carrier);
-
   const rows = carrierRates
     .filter((r) => {
       const rowCarrier = normalizeCarrierName(getValue(r, ["運送会社", "carrier"]));
@@ -93,7 +120,7 @@ function findStandardRate(carrier, region, size, carrierRates) {
       const rowSize = getValue(r, ["サイズ"]);
 
       return (
-        rowCarrier === normalizedCarrier &&
+        rowCarrier === carrier &&
         rowRegion === String(region).trim() &&
         String(rowSize).trim() !== ""
       );
@@ -120,30 +147,31 @@ function calculateFareByCarrier(
   carrierRates,
   specialSeinoRates
 ) {
-  const normalizedCarrier = normalizeCarrierName(carrier);
-  if (!normalizedCarrier) return null;
+  const resolvedCarrier = resolveCarrierForArea(carrier, prefecture);
+  if (!resolvedCarrier) return null;
 
-  let region = getCarrierRegion(normalizedCarrier, prefecture, carrierRegions);
+  let region = getCarrierRegion("西濃", prefecture, carrierRegions);
+  if (!region && resolvedCarrier !== "西濃" && resolvedCarrier !== "久留米") {
+    region = getCarrierRegion(resolvedCarrier, prefecture, carrierRegions);
+  }
   if (!region) return null;
 
   const size = getValue(product, ["基準サイズ", "基準"]);
   const weight = getShippingWeight(product);
 
-  if (normalizedCarrier === "西濃") {
-    const regionNum = Number(region);
-
-    if (!Number.isNaN(regionNum) && weight >= 200) {
-      region = String(Math.ceil(regionNum / 100) * 100);
-    }
-  }
-
   let rateRow = null;
 
-  if (normalizedCarrier === "西濃") {
-    const table = isSeinoSpecial(product) ? specialSeinoRates : carrierRates;
-    rateRow = findSeinoRate(region, weight, table);
+  if (resolvedCarrier === "西濃" || resolvedCarrier === "久留米") {
+    region = normalizeSeinoRegion(region);
+
+    const table =
+      resolvedCarrier === "西濃" && isSeinoSpecial(product)
+        ? specialSeinoRates
+        : carrierRates;
+
+    rateRow = findWeightRate(resolvedCarrier, region, weight, table);
   } else {
-    rateRow = findStandardRate(normalizedCarrier, region, size, carrierRates);
+    rateRow = findStandardRate(resolvedCarrier, region, size, carrierRates);
   }
 
   if (!rateRow) return null;
@@ -153,10 +181,12 @@ function calculateFareByCarrier(
   const relay = toNumber(getValue(rateRow, ["中継加算", "中継料", "relaySurcharge"]));
 
   return {
-    運送会社: normalizedCarrier,
+    運送会社: resolvedCarrier,
     地域: region,
-    適用サイズ: normalizedCarrier === "西濃" ? "" : (getValue(rateRow, ["サイズ"]) || size),
-    適用重量: normalizedCarrier === "西濃"
+    適用サイズ: resolvedCarrier === "西濃" || resolvedCarrier === "久留米"
+      ? ""
+      : (getValue(rateRow, ["サイズ"]) || size),
+    適用重量: resolvedCarrier === "西濃" || resolvedCarrier === "久留米"
       ? toNumber(getValue(rateRow, ["重量", "重量kg"]))
       : weight,
     基本運賃: basic,
@@ -196,15 +226,4 @@ export function buildFareResults(
     )
     .filter(Boolean)
     .sort((a, b) => a["合計"] - b["合計"]);
-}
-function isKyushu(prefecture) {
-  return [
-    "福岡県",
-    "佐賀県",
-    "長崎県",
-    "熊本県",
-    "大分県",
-    "宮崎県",
-    "鹿児島県",
-  ].includes(String(prefecture).trim());
 }

@@ -49,7 +49,7 @@ function App() {
         setError("");
 
         const p = await loadCsv("/products.csv");
-        const c = await loadCsv("/carriers.csv");
+        const c = await loadCsv("/carriers_with_kurume.csv");
         const r = await loadCsv("/carrier_regions.csv");
         const s = await loadCsv("/carriers_seino.csv");
 
@@ -57,10 +57,6 @@ function App() {
         setCarrierRates(c);
         setCarrierRegions(r);
         setSpecialSeinoRates(s);
-
-        console.log("products first row", p[0]);
-        console.log("carriers first row", c[0]);
-        console.log("carrier regions first row", r[0]);
       } catch (err) {
         console.error(err);
         setError(`CSVの読み込みに失敗しました: ${err.message}`);
@@ -131,7 +127,18 @@ function App() {
       <div className="page-container">
         <header className="page-header">
           <h1 className="page-title">品番・品名から運賃を調べるアプリ</h1>
+          <p className="page-description">
+            品番の完全一致だけでなく、品名や品番の部分一致でも検索できます。商品CSVの運送便①〜③を見て候補運賃を表示します。
+          </p>
         </header>
+
+        <div className="status-banner">
+          {loading
+            ? "GitHub上のCSVを読み込み中です。"
+            : error
+            ? error
+            : "GitHub上のCSVを自動読み込みしました。"}
+        </div>
 
         <section className="top-grid">
           <div className="panel search-panel">
@@ -267,7 +274,8 @@ function App() {
                   </div>
                   <div className="best-price-meta">
                     {bestResult["運送会社"]} / {prefecture} / {bestResult["地域"]} /{" "}
-                    {bestResult["運送会社"] === "西濃"
+                    {bestResult["候補元"]} /{" "}
+                    {bestResult["運送会社"] === "西濃" || bestResult["運送会社"] === "久留米"
                       ? `重量 ${bestResult["適用重量"] || "-"}`
                       : `サイズ ${bestResult["適用サイズ"] || "-"}`}
                   </div>
@@ -279,6 +287,7 @@ function App() {
                   <thead>
                     <tr>
                       <th>順位</th>
+                      <th>候補元</th>
                       <th>運送会社</th>
                       <th>地域</th>
                       <th>適用サイズ</th>
@@ -290,35 +299,39 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                   <tbody>
-  {results.map((row, index) => {
-    const isCheapest = index === 0;
+                    {results.map((row, index) => {
+                      const isCheapest = index === 0;
 
-    return (
-      <tr
-        key={`${row["運送会社"]}-${row["地域"]}-${index}`}
-        className={isCheapest ? "cheapest-row" : ""}
-      >
-        <td>{index + 1}</td>
-        <td className={isCheapest ? "cheapest-company" : ""}>
-          <div className="carrier-cell">
-            <span>{row["運送会社"]}</span>
-            {isCheapest && <span className="cheapest-badge">最安</span>}
-          </div>
-        </td>
-        <td>{row["地域"]}</td>
-        <td>{row["適用サイズ"] || "-"}</td>
-        <td>{row["適用重量"] || "-"}</td>
-        <td>¥{Number(row["基本運賃"] || 0).toLocaleString()}</td>
-        <td>¥{Number(row["離島加算"] || 0).toLocaleString()}</td>
-        <td>¥{Number(row["中継加算"] || 0).toLocaleString()}</td>
-        <td className={`total-cell ${isCheapest ? "cheapest-total" : ""}`}>
-          ¥{Number(row["合計"] || 0).toLocaleString()}
-        </td>
-      </tr>
-    );
-  })}
-</tbody>
+                      return (
+                        <tr
+                          key={`${row["運送会社"]}-${row["地域"]}-${row["候補元"]}-${index}`}
+                          className={isCheapest ? "cheapest-row" : ""}
+                        >
+                          <td>{index + 1}</td>
+                          <td>
+                            <span className="candidate-source-badge">
+                              {row["候補元"] || "-"}
+                            </span>
+                          </td>
+                          <td className={isCheapest ? "cheapest-company" : ""}>
+                            <div className="carrier-cell">
+                              <span>{row["運送会社"]}</span>
+                              {isCheapest && <span className="cheapest-badge">最安</span>}
+                            </div>
+                          </td>
+                          <td>{row["地域"]}</td>
+                          <td>{row["適用サイズ"] || "-"}</td>
+                          <td>{row["適用重量"] || "-"}</td>
+                          <td>¥{Number(row["基本運賃"] || 0).toLocaleString()}</td>
+                          <td>¥{Number(row["離島加算"] || 0).toLocaleString()}</td>
+                          <td>¥{Number(row["中継加算"] || 0).toLocaleString()}</td>
+                          <td className={`total-cell ${isCheapest ? "cheapest-total" : ""}`}>
+                            ¥{Number(row["合計"] || 0).toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
                 </table>
               </div>
 

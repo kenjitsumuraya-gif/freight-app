@@ -290,22 +290,35 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {results.map((row, index) => (
-                      <tr key={`${row["運送会社"]}-${row["地域"]}-${index}`}>
-                        <td>{index + 1}</td>
-                        <td>{row["運送会社"]}</td>
-                        <td>{row["地域"]}</td>
-                        <td>{row["適用サイズ"] || "-"}</td>
-                        <td>{row["適用重量"] || "-"}</td>
-                        <td>¥{Number(row["基本運賃"] || 0).toLocaleString()}</td>
-                        <td>¥{Number(row["離島加算"] || 0).toLocaleString()}</td>
-                        <td>¥{Number(row["中継加算"] || 0).toLocaleString()}</td>
-                        <td className="total-cell">
-                          ¥{Number(row["合計"] || 0).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                   <tbody>
+  {results.map((row, index) => {
+    const isCheapest = index === 0;
+
+    return (
+      <tr
+        key={`${row["運送会社"]}-${row["地域"]}-${index}`}
+        className={isCheapest ? "cheapest-row" : ""}
+      >
+        <td>{index + 1}</td>
+        <td className={isCheapest ? "cheapest-company" : ""}>
+          <div className="carrier-cell">
+            <span>{row["運送会社"]}</span>
+            {isCheapest && <span className="cheapest-badge">最安</span>}
+          </div>
+        </td>
+        <td>{row["地域"]}</td>
+        <td>{row["適用サイズ"] || "-"}</td>
+        <td>{row["適用重量"] || "-"}</td>
+        <td>¥{Number(row["基本運賃"] || 0).toLocaleString()}</td>
+        <td>¥{Number(row["離島加算"] || 0).toLocaleString()}</td>
+        <td>¥{Number(row["中継加算"] || 0).toLocaleString()}</td>
+        <td className={`total-cell ${isCheapest ? "cheapest-total" : ""}`}>
+          ¥{Number(row["合計"] || 0).toLocaleString()}
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
                 </table>
               </div>
 

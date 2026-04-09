@@ -30,7 +30,7 @@ function isKyushu(prefecture) {
 function resolveCarrierForArea(carrier, prefecture) {
   const normalized = normalizeCarrierName(carrier);
 
-  // 九州では西濃枠を久留米に差し替える
+  // 九州では西濃枠を久留米に差し替え
   if (isKyushu(prefecture) && normalized === "西濃") {
     return "久留米";
   }
@@ -82,7 +82,7 @@ function normalizeWeightCarrierRegion(region) {
   const regionNum = Number(region);
   if (Number.isNaN(regionNum)) return String(region).trim();
 
-  // 450 → 500 のように100単位切り上げ
+  // 450 -> 500
   return String(Math.ceil(regionNum / 100) * 100);
 }
 
@@ -144,6 +144,7 @@ function findStandardRate(carrier, region, size, carrierRates) {
 
 function calculateFareByCarrier(
   carrier,
+  candidateSource,
   product,
   prefecture,
   carrierRegions,
@@ -157,7 +158,6 @@ function calculateFareByCarrier(
 
   let region = null;
 
-  // 西濃・久留米は同じ地域マスタを使う
   if (resolvedCarrier === "西濃" || resolvedCarrier === "久留米") {
     region = getCarrierRegion("西濃", prefecture, carrierRegions);
   } else {
@@ -191,6 +191,7 @@ function calculateFareByCarrier(
   const relay = toNumber(getValue(rateRow, ["中継加算", "中継料", "relaySurcharge"]));
 
   return {
+    候補元: candidateSource,
     運送会社: resolvedCarrier,
     元運送会社: originalCarrier,
     地域: region,
@@ -216,26 +217,38 @@ export function buildFareResults(
   carrierRates,
   specialSeinoRates
 ) {
-  // 商品マスタの優先順位をそのまま候補にする
-  const carriers = [
-    getValue(product, ["運送便①"]),
-    getValue(product, ["運送便②"]),
-    getValue(product, ["運送便③"]),
+  const candidates = [
+    { source: "運送便①", carrier: getValue(product, ["運送便①"]) },
+    { source: "運送便②", carrier: getValue(product, ["運送便②"]) },
+    { source: "運送便③", carrier: getValue(product, ["運送便③"]) },
   ]
-    .map((c) => normalizeCarrierName(c))
-    .filter(Boolean);
+    .map((item) => ({
+      source: item.source,
+      carrier: normalizeCarrierName(item.carrier),
+    }))
+    .filter((item) => item.carrier);
 
-  // 九州では西濃→久留米に差し替わるので、その後に重複除去
-  const resolvedCarriers = carriers.map((carrier) =>
-    resolveCarrierForArea(carrier, prefecture)
-  );
+  const deduped = [];
+  const seen = new Set();
 
-  const uniqueCarriers = [...new Set(resolvedCarriers)];
+  for (const item of candidates) {
+    const resolvedCarrier = resolveCarrierForArea(item.carrier, prefecture);
+    const key = `${resolvedCarrier}-${item.source}`;
 
-  return uniqueCarriers
-    .map((carrier) =>
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push({
+        source: item.source,
+        carrier: item.carrier,
+      });
+    }
+  }
+
+  return deduped
+    .map((item) =>
       calculateFareByCarrier(
-        carrier,
+        item.carrier,
+        item.source,
         product,
         prefecture,
         carrierRegions,

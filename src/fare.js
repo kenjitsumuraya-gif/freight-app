@@ -30,7 +30,8 @@ function isKyushu(prefecture) {
 function resolveCarrierForArea(carrier, prefecture) {
   const normalized = normalizeCarrierName(carrier);
 
-  if (normalized === "西濃" && isKyushu(prefecture)) {
+  // 九州では西濃枠を久留米に差し替える
+  if (isKyushu(prefecture) && normalized === "西濃") {
     return "久留米";
   }
 
@@ -77,9 +78,11 @@ function isSeinoSpecial(product) {
   return String(getValue(product, ["西濃別表"]) || "0").trim() === "1";
 }
 
-function normalizeSeinoRegion(region) {
+function normalizeWeightCarrierRegion(region) {
   const regionNum = Number(region);
   if (Number.isNaN(regionNum)) return String(region).trim();
+
+  // 450 → 500 のように100単位切り上げ
   return String(Math.ceil(regionNum / 100) * 100);
 }
 
@@ -147,13 +150,20 @@ function calculateFareByCarrier(
   carrierRates,
   specialSeinoRates
 ) {
-  const resolvedCarrier = resolveCarrierForArea(carrier, prefecture);
+  const originalCarrier = normalizeCarrierName(carrier);
+  const resolvedCarrier = resolveCarrierForArea(originalCarrier, prefecture);
+
   if (!resolvedCarrier) return null;
 
-  let region = getCarrierRegion("西濃", prefecture, carrierRegions);
-  if (!region && resolvedCarrier !== "西濃" && resolvedCarrier !== "久留米") {
+  let region = null;
+
+  // 西濃・久留米は同じ地域マスタを使う
+  if (resolvedCarrier === "西濃" || resolvedCarrier === "久留米") {
+    region = getCarrierRegion("西濃", prefecture, carrierRegions);
+  } else {
     region = getCarrierRegion(resolvedCarrier, prefecture, carrierRegions);
   }
+
   if (!region) return null;
 
   const size = getValue(product, ["基準サイズ", "基準"]);
@@ -162,7 +172,7 @@ function calculateFareByCarrier(
   let rateRow = null;
 
   if (resolvedCarrier === "西濃" || resolvedCarrier === "久留米") {
-    region = normalizeSeinoRegion(region);
+    region = normalizeWeightCarrierRegion(region);
 
     const table =
       resolvedCarrier === "西濃" && isSeinoSpecial(product)
@@ -182,13 +192,16 @@ function calculateFareByCarrier(
 
   return {
     運送会社: resolvedCarrier,
+    元運送会社: originalCarrier,
     地域: region,
-    適用サイズ: resolvedCarrier === "西濃" || resolvedCarrier === "久留米"
-      ? ""
-      : (getValue(rateRow, ["サイズ"]) || size),
-    適用重量: resolvedCarrier === "西濃" || resolvedCarrier === "久留米"
-      ? toNumber(getValue(rateRow, ["重量", "重量kg"]))
-      : weight,
+    適用サイズ:
+      resolvedCarrier === "西濃" || resolvedCarrier === "久留米"
+        ? ""
+        : (getValue(rateRow, ["サイズ"]) || size),
+    適用重量:
+      resolvedCarrier === "西濃" || resolvedCarrier === "久留米"
+        ? toNumber(getValue(rateRow, ["重量", "重量kg"]))
+        : weight,
     基本運賃: basic,
     離島加算: island,
     中継加算: relay,
@@ -203,6 +216,7 @@ export function buildFareResults(
   carrierRates,
   specialSeinoRates
 ) {
+  // 商品マスタの優先順位をそのまま候補にする
   const carriers = [
     getValue(product, ["運送便①"]),
     getValue(product, ["運送便②"]),
@@ -211,7 +225,12 @@ export function buildFareResults(
     .map((c) => normalizeCarrierName(c))
     .filter(Boolean);
 
-  const uniqueCarriers = [...new Set(carriers)];
+  // 九州では西濃→久留米に差し替わるので、その後に重複除去
+  const resolvedCarriers = carriers.map((carrier) =>
+    resolveCarrierForArea(carrier, prefecture)
+  );
+
+  const uniqueCarriers = [...new Set(resolvedCarriers)];
 
   return uniqueCarriers
     .map((carrier) =>

@@ -270,8 +270,9 @@ export default function App() {
               <h2 className="card-title">検索候補一覧</h2>
             </div>
 
-            <div className="table-scroll">
-              <table className="data-table candidate-table">
+           <div className="candidate-table-wrap">
+  <div className="table-scroll">
+    <table className="data-table candidate-table">
                 <thead>
                   <tr>
                     <th>品番</th>

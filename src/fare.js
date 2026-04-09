@@ -363,3 +363,104 @@ export function findBestFare(params) {
   const results = calculateFareResults(params);
   return results.find((row) => row.isCheapest) || null;
 }
+export function calculateFareResults({
+  product,
+  prefecture,
+  carrierRegions = [],
+  carriers = [],
+  carriersSeino = [],
+}) {
+  if (!product || !prefecture) return [];
+
+  const size = getSize(product);
+  const chargeableWeight = getChargeableWeight(product);
+  const candidates = buildCandidates(product, prefecture);
+
+  const results = candidates
+    .map((candidate) => {
+      const carrier = candidate.carrier;
+      const region = resolveRegionCode(carrierRegions, carrier, prefecture);
+
+      if (!region) {
+        return {
+          ...candidate,
+          region: 0,
+          size,
+          chargeableWeight,
+          calcType: isWeightCarrier(carrier) ? "weight" : "size",
+          matchedSize: 0,
+          matchedWeight: 0,
+          fare: 0,
+          islandFee: 0,
+          relayFee: 0,
+          total: 0,
+          error: "地域コード未取得",
+        };
+      }
+
+      let fareResult = null;
+
+      if (isWeightCarrier(carrier)) {
+        fareResult = calcFareForWeightCarrier({
+          carrier,
+          carriersRows: carriers,
+          seinoRows: carriersSeino,
+          weight: chargeableWeight,
+          region,
+        });
+      } else {
+        fareResult = calcFareForSizeCarrier({
+          carrierRows: carriers,
+          carrier,
+          size,
+          region,
+        });
+      }
+
+      if (!fareResult) {
+        return {
+          ...candidate,
+          region,
+          size,
+          chargeableWeight,
+          calcType: isWeightCarrier(carrier) ? "weight" : "size",
+          matchedSize: 0,
+          matchedWeight: 0,
+          fare: 0,
+          islandFee: 0,
+          relayFee: 0,
+          total: 0,
+          error: "運賃表未一致",
+        };
+      }
+
+      return {
+        ...candidate,
+        region,
+        size,
+        chargeableWeight,
+        ...fareResult,
+        error: "",
+      };
+    })
+    .filter((row) => !row.error);
+
+  const sorted = sortResults(results);
+  const cheapestTotal = sorted.length ? sorted[0].total : null;
+
+  return sorted.map((row) => ({
+    ...row,
+    isCheapest: cheapestTotal != null && row.total === cheapestTotal,
+    cheapestBadge: cheapestTotal != null && row.total === cheapestTotal ? "最安" : "",
+    candidateLabel: `候補元: ${row.source}`,
+  }));
+}
+
+export function buildFareResults(params) {
+  return calculateFareResults(params);
+}
+
+export function findBestFare(params) {
+  const results = calculateFareResults(params);
+  return results.find((row) => row.isCheapest) || null;
+}

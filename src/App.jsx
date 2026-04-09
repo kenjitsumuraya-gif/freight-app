@@ -99,7 +99,7 @@ export default function App() {
   const [loadError, setLoadError] = useState("");
 
   const [searchText, setSearchText] = useState("");
-  const [prefecture, setPrefecture] = useState("島根県");
+  const [prefecture, setPrefecture] = useState("愛媛県");
   const [selectedProductKey, setSelectedProductKey] = useState("");
 
   useEffect(() => {
@@ -164,6 +164,7 @@ export default function App() {
 
   const selectedProduct = useMemo(() => {
     if (!selectedProductKey) return null;
+
     return (
       filteredProducts.find((product) => getProductKey(product) === selectedProductKey) ||
       products.find((product) => getProductKey(product) === selectedProductKey) ||
@@ -242,7 +243,9 @@ export default function App() {
                 placeholder="品番または品名を入力"
               />
 
-              <p className="field-help">空欄でも一覧表示します。入力すると絞り込みます。</p>
+              <p className="field-help">
+                空欄でも一覧表示します。入力すると絞り込みます。
+              </p>
             </div>
 
             <div className="form-block">
@@ -270,65 +273,66 @@ export default function App() {
               <h2 className="card-title">検索候補一覧</h2>
             </div>
 
-           <div className="candidate-table-wrap">
-  <div className="table-scroll">
-    <table className="data-table candidate-table">
-                <thead>
-                  <tr>
-                    <th>品番</th>
-                    <th>品名</th>
-                    <th>基準</th>
-                    <th>実重量</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
+            <div className="candidate-table-wrap">
+              <div className="table-scroll">
+                <table className="data-table candidate-table">
+                  <thead>
                     <tr>
-                      <td colSpan="4" className="empty-cell">
-                        CSVを読み込み中です。
-                      </td>
+                      <th>品番</th>
+                      <th>品名</th>
+                      <th>基準</th>
+                      <th>実重量</th>
                     </tr>
-                  ) : loadError ? (
-                    <tr>
-                      <td colSpan="4" className="empty-cell">
-                        {loadError}
-                      </td>
-                    </tr>
-                  ) : filteredProducts.length === 0 ? (
-                    <tr>
-                      <td colSpan="4" className="empty-cell">
-                        該当する商品がありません。
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredProducts.map((product) => {
-                      const productKey = getProductKey(product);
-                      const isSelected = selectedProductKey === productKey;
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan="4" className="empty-cell">
+                          CSVを読み込み中です。
+                        </td>
+                      </tr>
+                    ) : loadError ? (
+                      <tr>
+                        <td colSpan="4" className="empty-cell">
+                          {loadError}
+                        </td>
+                      </tr>
+                    ) : filteredProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="empty-cell">
+                          該当する商品がありません。
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredProducts.map((product) => {
+                        const productKey = getProductKey(product);
+                        const isSelected = selectedProductKey === productKey;
 
-                      return (
-                        <tr
-                          key={productKey}
-                          className={isSelected ? "is-selected" : ""}
-                          onClick={() => handleSelectProduct(product)}
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSelectProduct(product);
-                            }
-                          }}
-                        >
-                          <td>{toStr(product["品番"])}</td>
-                          <td>{toStr(product["品名"])}</td>
-                          <td>{toStr(product["基準サイズ"])}</td>
-                          <td>{toStr(product["実重量"])}</td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                        return (
+                          <tr
+                            key={productKey}
+                            className={isSelected ? "is-selected" : ""}
+                            onClick={() => handleSelectProduct(product)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleSelectProduct(product);
+                              }
+                            }}
+                          >
+                            <td>{toStr(product["品番"])}</td>
+                            <td>{toStr(product["品名"])}</td>
+                            <td>{toStr(product["基準サイズ"])}</td>
+                            <td>{toStr(product["実重量"])}</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>
@@ -375,15 +379,21 @@ export default function App() {
                 </div>
                 <div className="summary-row">
                   <span className="summary-label">基準サイズ</span>
-                  <span className="summary-value">{toStr(selectedProduct["基準サイズ"]) || "-"}</span>
+                  <span className="summary-value">
+                    {toStr(selectedProduct["基準サイズ"]) || "-"}
+                  </span>
                 </div>
                 <div className="summary-row">
                   <span className="summary-label">実重量</span>
-                  <span className="summary-value">{toStr(selectedProduct["実重量"]) || "-"}</span>
+                  <span className="summary-value">
+                    {toStr(selectedProduct["実重量"]) || "-"}
+                  </span>
                 </div>
                 <div className="summary-row">
                   <span className="summary-label">m3重量</span>
-                  <span className="summary-value">{toStr(selectedProduct["m3重量"]) || "-"}</span>
+                  <span className="summary-value">
+                    {toStr(selectedProduct["m3重量"]) || "-"}
+                  </span>
                 </div>
                 <div className="summary-row">
                   <span className="summary-label">送り先</span>

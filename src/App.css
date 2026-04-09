@@ -57,38 +57,38 @@ select {
   width: 100%;
   max-width: 1700px;
   margin: 0 auto;
-  padding: 14px 20px 24px;
+  padding: 10px 20px 18px;
 }
 
 .page-header {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .page-title {
   margin: 0;
-  font-size: 2rem;
-  line-height: 1.2;
+  font-size: 1.85rem;
+  line-height: 1.15;
   font-weight: 800;
   letter-spacing: 0.01em;
   color: #0b2a67;
 }
 
 .page-subtitle {
-  margin: 10px 0 0;
-  font-size: 0.98rem;
+  margin: 8px 0 0;
+  font-size: 0.96rem;
   color: var(--muted);
 }
 
 .layout-stack {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .top-grid {
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 18px;
+  grid-template-columns: 1.02fr 0.98fr;
+  gap: 16px;
   align-items: stretch;
 }
 
@@ -100,19 +100,19 @@ select {
 }
 
 .panel-card {
-  min-height: 560px;
-  padding: 18px 20px 18px;
+  min-height: 430px;
+  padding: 16px 18px;
 }
 
 .result-card {
-  padding: 18px 20px 20px;
+  padding: 16px 18px 18px;
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .card-title {
@@ -120,7 +120,7 @@ select {
   align-items: center;
   gap: 10px;
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: #0b2a67;
 }
@@ -134,7 +134,7 @@ select {
 }
 
 .form-block {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .field-row {
@@ -142,13 +142,13 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .field-label {
   display: inline-block;
-  margin-bottom: 10px;
-  font-size: 1rem;
+  margin-bottom: 8px;
+  font-size: 0.98rem;
   font-weight: 700;
   color: #0b2a67;
 }
@@ -158,21 +158,21 @@ select {
 }
 
 .field-help {
-  margin: 10px 0 0;
-  font-size: 0.95rem;
+  margin: 8px 0 0;
+  font-size: 0.92rem;
   color: #98a6bf;
 }
 
 .text-input,
 .select-input {
   width: 100%;
-  height: 80px;
-  padding: 0 26px;
-  border-radius: 24px;
+  height: 68px;
+  padding: 0 22px;
+  border-radius: 22px;
   border: 1.5px solid #c8d4e8;
   background: #ffffff;
   outline: none;
-  font-size: 1rem;
+  font-size: 0.98rem;
   color: var(--text);
   transition:
     border-color 0.18s ease,
@@ -196,11 +196,11 @@ select {
 }
 
 .clear-button {
-  min-width: 108px;
-  height: 62px;
-  padding: 0 22px;
+  min-width: 100px;
+  height: 58px;
+  padding: 0 20px;
   border: 1.5px solid #c7d3e5;
-  border-radius: 22px;
+  border-radius: 20px;
   background: #ffffff;
   color: #143975;
   font-weight: 700;
@@ -220,9 +220,8 @@ select {
   transform: translateY(1px);
 }
 
-/* 候補一覧はコンパクトにしてスクロール前提 */
 .candidate-table-wrap {
-  height: 360px;
+  height: 250px;
   overflow: auto;
   border-radius: 22px;
 }
@@ -257,8 +256,8 @@ select {
   color: #0d2b66;
   font-weight: 800;
   text-align: left;
-  font-size: 0.98rem;
-  padding: 18px 20px;
+  font-size: 0.96rem;
+  padding: 16px 18px;
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
@@ -272,7 +271,7 @@ select {
 }
 
 .data-table tbody td {
-  padding: 18px 20px;
+  padding: 16px 18px;
   border-bottom: 1px solid #e3ebf6;
   background: #ffffff;
   color: #163466;
@@ -329,81 +328,81 @@ select {
 }
 
 .result-placeholder {
-  min-height: 150px;
+  min-height: 120px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 22px;
+  padding: 18px 20px;
   border: 1px dashed #d4dfef;
-  border-radius: 24px;
+  border-radius: 22px;
   background: #fbfdff;
   color: var(--muted);
-  font-size: 1rem;
+  font-size: 0.98rem;
 }
 
 .best-fare-card {
   background: linear-gradient(180deg, #08245b 0%, #0d2d70 100%);
   color: var(--best-text);
   border-radius: 28px;
-  padding: 22px 24px;
-  margin-bottom: 18px;
+  padding: 18px 22px;
+  margin-bottom: 14px;
 }
 
 .best-fare-label {
-  font-size: 0.98rem;
+  font-size: 0.96rem;
   opacity: 0.92;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .best-fare-price {
-  font-size: 2.85rem;
-  line-height: 1.1;
+  font-size: 2.45rem;
+  line-height: 1.08;
   font-weight: 800;
   letter-spacing: 0.01em;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .best-fare-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .best-fare-chip {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 6px 12px;
+  min-height: 32px;
+  padding: 5px 11px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
 .selected-product-summary {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .summary-row {
   background: #f8fbff;
   border: 1px solid #dbe5f2;
   border-radius: 16px;
-  padding: 12px 14px;
+  padding: 10px 12px;
 }
 
 .summary-label {
   display: block;
   margin-bottom: 4px;
-  font-size: 0.85rem;
+  font-size: 0.83rem;
   color: #7b8aa6;
 }
 
 .summary-value {
   display: block;
-  font-size: 0.98rem;
+  font-size: 0.96rem;
   font-weight: 700;
   color: #12356c;
   word-break: break-word;
@@ -443,7 +442,7 @@ select {
   }
 
   .candidate-table-wrap {
-    height: 320px;
+    height: 280px;
   }
 
   .selected-product-summary {
@@ -453,20 +452,20 @@ select {
 
 @media (max-width: 768px) {
   .app-shell {
-    padding: 14px;
+    padding: 12px 14px 18px;
   }
 
   .page-title {
-    font-size: 1.7rem;
+    font-size: 1.65rem;
   }
 
   .page-subtitle {
-    font-size: 0.95rem;
+    font-size: 0.93rem;
   }
 
   .panel-card,
   .result-card {
-    padding: 16px;
+    padding: 14px;
     border-radius: 22px;
   }
 
@@ -481,17 +480,17 @@ select {
 
   .text-input,
   .select-input {
-    height: 68px;
+    height: 62px;
     padding: 0 18px;
-    border-radius: 20px;
+    border-radius: 18px;
   }
 
   .candidate-table-wrap {
-    height: 280px;
+    height: 240px;
   }
 
   .best-fare-price {
-    font-size: 2.2rem;
+    font-size: 2.05rem;
   }
 
   .selected-product-summary {
@@ -500,6 +499,6 @@ select {
 
   .data-table thead th,
   .data-table tbody td {
-    padding: 14px 14px;
+    padding: 13px 14px;
   }
 }

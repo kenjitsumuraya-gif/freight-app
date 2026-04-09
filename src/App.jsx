@@ -49,7 +49,7 @@ function App() {
         setError("");
 
         const p = await loadCsv("/products.csv");
-        const c = await loadCsv("/carriers_with_kurume.csv");
+        const c = await loadCsv("/carriers.csv");
         const r = await loadCsv("/carrier_regions.csv");
         const s = await loadCsv("/carriers_seino.csv");
 

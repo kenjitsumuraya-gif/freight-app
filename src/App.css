@@ -3,21 +3,21 @@
   --card: #ffffff;
   --card-border: #dbe4f0;
   --text: #0d2b66;
-  --muted: #6f7f99;
-  --line: #d8e2f0;
-  --head: #e7eef8;
-  --primary: #123a7a;
+  --muted: #7d8ca5;
+  --line: #dce5f2;
+  --head: #e8eff8;
+  --primary: #113a7b;
   --primary-soft: #eef4ff;
   --primary-border: #b9cdf3;
-  --best-bg: #0e2b66;
+  --best-bg: #0d2b66;
   --best-text: #ffffff;
   --badge-bg: #fff1bf;
   --badge-text: #7a5600;
   --selected-row: #eaf2ff;
-  --selected-row-strong: #d9e8ff;
-  --cheapest-row: #f4f8ff;
-  --shadow: 0 8px 24px rgba(16, 42, 88, 0.06);
-  --radius-lg: 28px;
+  --selected-row-strong: #dbe9ff;
+  --cheapest-row: #f5f8ff;
+  --shadow: 0 8px 24px rgba(16, 42, 88, 0.05);
+  --radius-lg: 26px;
   --radius-md: 18px;
   --radius-sm: 12px;
 }
@@ -55,9 +55,9 @@ select {
 
 .app-shell {
   width: 100%;
-  max-width: 1720px;
+  max-width: 1700px;
   margin: 0 auto;
-  padding: 18px 20px 28px;
+  padding: 14px 20px 24px;
 }
 
 .page-header {
@@ -66,7 +66,7 @@ select {
 
 .page-title {
   margin: 0;
-  font-size: 2.1rem;
+  font-size: 2rem;
   line-height: 1.2;
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -75,19 +75,19 @@ select {
 
 .page-subtitle {
   margin: 10px 0 0;
-  font-size: 1rem;
+  font-size: 0.98rem;
   color: var(--muted);
 }
 
 .layout-stack {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .top-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.05fr 0.95fr;
   gap: 18px;
   align-items: stretch;
 }
@@ -100,8 +100,8 @@ select {
 }
 
 .panel-card {
-  min-height: 540px;
-  padding: 18px 20px 20px;
+  min-height: 560px;
+  padding: 18px 20px 18px;
 }
 
 .result-card {
@@ -166,10 +166,10 @@ select {
 .text-input,
 .select-input {
   width: 100%;
-  height: 78px;
-  padding: 0 28px;
+  height: 80px;
+  padding: 0 26px;
   border-radius: 24px;
-  border: 1.5px solid #c9d5e8;
+  border: 1.5px solid #c8d4e8;
   background: #ffffff;
   outline: none;
   font-size: 1rem;
@@ -196,8 +196,8 @@ select {
 }
 
 .clear-button {
-  min-width: 112px;
-  height: 64px;
+  min-width: 108px;
+  height: 62px;
   padding: 0 22px;
   border: 1.5px solid #c7d3e5;
   border-radius: 22px;
@@ -220,6 +220,13 @@ select {
   transform: translateY(1px);
 }
 
+/* 候補一覧はコンパクトにしてスクロール前提 */
+.candidate-table-wrap {
+  height: 360px;
+  overflow: auto;
+  border-radius: 22px;
+}
+
 .table-scroll {
   width: 100%;
   overflow-x: auto;
@@ -228,7 +235,7 @@ select {
 }
 
 .candidate-table {
-  min-width: 760px;
+  min-width: 720px;
 }
 
 .result-table {
@@ -245,7 +252,7 @@ select {
 .data-table thead th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 2;
   background: var(--head);
   color: #0d2b66;
   font-weight: 800;
@@ -285,8 +292,7 @@ select {
   cursor: pointer;
   transition:
     background 0.16s ease,
-    box-shadow 0.16s ease,
-    transform 0.16s ease;
+    box-shadow 0.16s ease;
 }
 
 .candidate-table tbody tr:hover td {
@@ -323,7 +329,7 @@ select {
 }
 
 .result-placeholder {
-  min-height: 170px;
+  min-height: 150px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -339,18 +345,18 @@ select {
   background: linear-gradient(180deg, #08245b 0%, #0d2d70 100%);
   color: var(--best-text);
   border-radius: 28px;
-  padding: 24px 26px;
+  padding: 22px 24px;
   margin-bottom: 18px;
 }
 
 .best-fare-label {
-  font-size: 1rem;
+  font-size: 0.98rem;
   opacity: 0.92;
   margin-bottom: 8px;
 }
 
 .best-fare-price {
-  font-size: 3rem;
+  font-size: 2.85rem;
   line-height: 1.1;
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -436,6 +442,10 @@ select {
     min-height: auto;
   }
 
+  .candidate-table-wrap {
+    height: 320px;
+  }
+
   .selected-product-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -443,7 +453,7 @@ select {
 
 @media (max-width: 768px) {
   .app-shell {
-    padding: 14px 14px 24px;
+    padding: 14px;
   }
 
   .page-title {
@@ -471,9 +481,13 @@ select {
 
   .text-input,
   .select-input {
-    height: 66px;
+    height: 68px;
     padding: 0 18px;
     border-radius: 20px;
+  }
+
+  .candidate-table-wrap {
+    height: 280px;
   }
 
   .best-fare-price {

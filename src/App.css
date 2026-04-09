@@ -44,19 +44,19 @@ button {
 }
 
 .page-container {
-  width: min(100%, 1760px);
+  width: min(100%, 1720px);
   margin: 0 auto;
-  padding: 16px 20px 22px;
+  padding: 10px 16px 16px;
 }
 
 .page-header {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .page-title {
-  margin: 0 0 10px;
-  font-size: 34px;
-  line-height: 1.2;
+  margin: 0 0 6px;
+  font-size: 30px;
+  line-height: 1.15;
   font-weight: 800;
   letter-spacing: 0.01em;
   color: #0c1c45;
@@ -64,71 +64,77 @@ button {
 
 .page-description {
   margin: 0;
-  font-size: 17px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.45;
   color: var(--muted);
 }
 
 .status-banner {
   display: flex;
   align-items: center;
-  min-height: 58px;
-  padding: 0 18px;
-  margin: 16px 0 18px;
+  min-height: 48px;
+  padding: 0 16px;
+  margin: 10px 0 12px;
   border: 1px solid #cad5e4;
-  border-radius: 18px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.78);
   color: #25324b;
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .top-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
-  gap: 18px;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 14px;
+  align-items: stretch;
 }
 
 .panel {
   background: var(--card);
   border: 1px solid #d8e0ec;
-  border-radius: 28px;
-  padding: 22px;
+  border-radius: 24px;
+  padding: 16px 18px;
   box-shadow: 0 2px 10px rgba(16, 24, 40, 0.03);
+}
+
+.search-panel,
+.candidates-panel {
+  min-height: 440px;
 }
 
 .panel-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .panel-title-group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .panel-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  font-size: 22px;
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
   color: #0e1e48;
 }
 
 .panel-title {
   margin: 0;
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 800;
   color: #0b163b;
 }
 
 .form-block + .form-block {
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
 .label-row {
@@ -136,13 +142,13 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .field-label {
   display: inline-block;
-  margin-bottom: 10px;
-  font-size: 18px;
+  margin-bottom: 8px;
+  font-size: 16px;
   font-weight: 800;
   color: #0d173d;
 }
@@ -152,10 +158,10 @@ button {
 }
 
 .clear-button {
-  height: 52px;
-  padding: 0 22px;
+  height: 44px;
+  padding: 0 18px;
   border: 1px solid #c8d2df;
-  border-radius: 18px;
+  border-radius: 16px;
   background: linear-gradient(180deg, #ffffff 0%, #f6f8fc 100%);
   color: #0f1d45;
   font-weight: 700;
@@ -169,13 +175,13 @@ button {
 .text-input,
 .select-input {
   width: 100%;
-  height: 64px;
-  padding: 0 18px;
+  height: 54px;
+  padding: 0 16px;
   border: 1px solid #cfd8e6;
-  border-radius: 20px;
+  border-radius: 16px;
   background: #fff;
   color: #0f172a;
-  font-size: 20px;
+  font-size: 17px;
   outline: none;
 }
 
@@ -190,31 +196,31 @@ button {
 }
 
 .field-help {
-  margin-top: 10px;
-  font-size: 14px;
+  margin-top: 8px;
+  font-size: 13px;
   color: #8893a7;
 }
 
 .candidate-table-wrap {
-  max-height: 440px;
+  max-height: 340px;
   overflow: auto;
   border: 1px solid #d9e2ef;
-  border-radius: 22px;
+  border-radius: 18px;
   background: var(--soft-table);
 }
 
 .candidate-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 720px;
   border-collapse: separate;
   border-spacing: 0;
 }
 
 .candidate-table thead th {
-  padding: 16px 18px;
+  padding: 12px 14px;
   background: #dfe7f3;
   color: #0c1c45;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
   text-align: left;
   border-bottom: 1px solid #d4ddea;
@@ -225,17 +231,17 @@ button {
 }
 
 .candidate-table thead th:first-child {
-  border-top-left-radius: 18px;
+  border-top-left-radius: 16px;
 }
 
 .candidate-table thead th:last-child {
-  border-top-right-radius: 18px;
+  border-top-right-radius: 16px;
 }
 
 .candidate-table tbody td {
-  padding: 15px 18px;
-  font-size: 16px;
-  line-height: 1.5;
+  padding: 11px 14px;
+  font-size: 14px;
+  line-height: 1.35;
   color: #12203f;
   border-bottom: 1px solid #dbe3ef;
   background: rgba(255, 255, 255, 0.18);
@@ -271,99 +277,99 @@ button {
   text-align: center;
   color: #7b8798;
   background: transparent;
-  padding: 28px 18px !important;
+  padding: 20px 14px !important;
 }
 
 .results-section {
   background: var(--card);
   border: 1px solid #d8e0ec;
-  border-radius: 28px;
-  padding: 22px;
+  border-radius: 24px;
+  padding: 16px 18px;
   box-shadow: 0 2px 10px rgba(16, 24, 40, 0.03);
 }
 
 .section-heading-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .section-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  font-size: 22px;
+  width: 30px;
+  height: 30px;
+  font-size: 20px;
 }
 
 .section-heading {
   margin: 0;
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 800;
   color: #0b163b;
 }
 
 .placeholder-card {
-  min-height: 120px;
+  min-height: 96px;
   display: flex;
   align-items: center;
-  padding: 22px;
+  padding: 18px;
   border: 1px dashed #ccd5e2;
-  border-radius: 22px;
+  border-radius: 18px;
   background: #fafcff;
   color: #667085;
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .best-price-card {
-  margin-bottom: 18px;
-  padding: 22px 24px;
-  border-radius: 26px;
+  margin-bottom: 12px;
+  padding: 16px 20px;
+  border-radius: 22px;
   background: linear-gradient(90deg, var(--navy) 0%, #08183e 55%, #091a43 100%);
   color: #fff;
   box-shadow: 0 10px 24px rgba(6, 18, 51, 0.18);
 }
 
 .best-price-label {
-  font-size: 16px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.78);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .best-price-value {
-  font-size: 58px;
+  font-size: 42px;
   line-height: 1;
   font-weight: 800;
   letter-spacing: 0.01em;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .best-price-meta {
-  font-size: 18px;
+  font-size: 15px;
   color: rgba(255, 255, 255, 0.88);
 }
 
 .result-table-card {
   overflow: auto;
   border: 1px solid #d9e2ef;
-  border-radius: 22px;
+  border-radius: 18px;
   background: #fff;
 }
 
 .result-table {
   width: 100%;
-  min-width: 1100px;
+  min-width: 980px;
   border-collapse: separate;
   border-spacing: 0;
 }
 
 .result-table thead th {
-  padding: 16px 14px;
+  padding: 12px 10px;
   background: #f0f4fa;
   color: #0c1c45;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 800;
   text-align: center;
   border-bottom: 1px solid #d8e2ef;
@@ -371,8 +377,8 @@ button {
 }
 
 .result-table tbody td {
-  padding: 15px 14px;
-  font-size: 15px;
+  padding: 11px 10px;
+  font-size: 13px;
   color: #12203f;
   text-align: center;
   border-bottom: 1px solid #e9eef5;
@@ -394,8 +400,8 @@ button {
 }
 
 .selected-product-note {
-  margin-top: 14px;
-  font-size: 15px;
+  margin-top: 10px;
+  font-size: 13px;
   color: #4b5870;
 }
 
@@ -404,56 +410,89 @@ button {
   color: #0d1c45;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .page-container {
-    padding: 14px 14px 24px;
+    padding: 8px 12px 14px;
   }
 
+  .page-title {
+    font-size: 28px;
+  }
+
+  .top-grid {
+    gap: 12px;
+  }
+
+  .panel {
+    padding: 14px 16px;
+  }
+
+  .search-panel,
+  .candidates-panel {
+    min-height: 400px;
+  }
+
+  .candidate-table-wrap {
+    max-height: 300px;
+  }
+
+  .best-price-value {
+    font-size: 38px;
+  }
+}
+
+@media (max-width: 1100px) {
   .top-grid {
     grid-template-columns: 1fr;
   }
 
-  .best-price-value {
-    font-size: 48px;
+  .search-panel,
+  .candidates-panel {
+    min-height: auto;
+  }
+
+  .candidate-table-wrap {
+    max-height: 280px;
   }
 }
 
 @media (max-width: 768px) {
   .page-title {
-    font-size: 28px;
+    font-size: 24px;
   }
 
   .page-description {
-    font-size: 15px;
+    font-size: 14px;
+    line-height: 1.4;
   }
 
   .status-banner {
-    font-size: 16px;
-    min-height: 52px;
+    font-size: 14px;
+    min-height: 44px;
   }
 
   .panel,
   .results-section {
-    padding: 16px;
-    border-radius: 22px;
+    padding: 14px;
+    border-radius: 18px;
   }
 
   .panel-title,
   .section-heading {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .text-input,
   .select-input {
-    height: 52px;
-    font-size: 18px;
+    height: 44px;
+    font-size: 15px;
   }
 
   .best-price-value {
-    font-size: 40px;
+    font-size: 34px;
   }
 
   .best-price-meta {
-    font-size: 15px;
+    font-size: 14px;
   }
 }

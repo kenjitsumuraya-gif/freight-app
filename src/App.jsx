@@ -132,14 +132,7 @@ function App() {
           </p>
         </header>
 
-        <div className="status-banner">
-          {loading
-            ? "GitHub上のCSVを読み込み中です。"
-            : error
-            ? error
-            : "GitHub上のCSVを自動読み込みしました。"}
-        </div>
-
+     
         <section className="top-grid">
           <div className="panel search-panel">
             <div className="panel-title-row">

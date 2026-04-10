@@ -81,8 +81,7 @@ function normalizeCarrierName(name) {
 }
 
 function formatCurrency(value) {
-  const num = toNumber(value);
-  return `¥${num.toLocaleString("ja-JP")}`;
+  return `¥${toNumber(value).toLocaleString("ja-JP")}`;
 }
 
 function getProductCode(product) {
@@ -101,7 +100,6 @@ function getProductName(product) {
 function getDisplayLabel(product) {
   const code = getProductCode(product);
   const name = getProductName(product);
-
   if (code && name) return `${code} / ${name}`;
   return code || name || "(名称なし)";
 }
@@ -121,15 +119,11 @@ function getRefTypeLabel(row) {
 }
 
 function getRefValue(row) {
-  if (row?.calcType === "weight") {
-    return toNumber(row?.matchedWeight || row?.referenceValue || 0);
+  if (!row) return 0;
+  if (row.calcType === "weight") {
+    return toNumber(row.matchedWeight || row.referenceValue || 0);
   }
-  return toNumber(row?.matchedSize || row?.referenceValue || 0);
-}
-
-function getStatusLabel(row) {
-  if (!row) return "";
-  return row.cheapestBadge || "";
+  return toNumber(row.matchedSize || row.referenceValue || 0);
 }
 
 export default function App() {
@@ -243,34 +237,34 @@ export default function App() {
 
   return (
     <div className="app">
-      <div className="container compact">
+      <div className="app-shell">
         <header className="page-header">
-          <h1>運賃検索</h1>
+          <h1>🚚 運賃検索</h1>
           <p>品番・品名から候補運送会社の運賃を比較</p>
         </header>
 
         {loading && (
-          <div className="card">
-            <div className="card-body">CSVを読み込み中です</div>
-          </div>
+          <section className="panel">
+            <div className="panel-body">CSVを読み込み中です</div>
+          </section>
         )}
 
         {!loading && loadError && (
-          <div className="card">
-            <div className="card-body error-text">{loadError}</div>
-          </div>
+          <section className="panel">
+            <div className="panel-body error-text">{loadError}</div>
+          </section>
         )}
 
         {!loading && !loadError && (
           <>
-            <section className="card">
-              <div className="card-header">
+            <section className="panel">
+              <div className="panel-header">
                 <h2>検索条件</h2>
               </div>
 
-              <div className="card-body">
-                <div className="form-grid">
-                  <div className="form-group">
+              <div className="panel-body">
+                <div className="controls-grid">
+                  <div className="control">
                     <label htmlFor="keyword">品番・品名</label>
                     <div className="input-row">
                       <input
@@ -282,7 +276,7 @@ export default function App() {
                       />
                       <button
                         type="button"
-                        className="ghost-button"
+                        className="btn btn-ghost"
                         onClick={() => setKeyword("")}
                       >
                         クリア
@@ -290,7 +284,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="form-group">
+                  <div className="control">
                     <label htmlFor="prefecture">都道府県</label>
                     <select
                       id="prefecture"
@@ -306,28 +300,24 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="summary-row">
-                  <div className="summary-chip">
-                    検索件数: {candidateProducts.length}
-                  </div>
-                  <div className="summary-chip">
-                    選択商品: {selectedCode || "-"}
-                  </div>
-                  <div className="summary-chip">配送先: {prefecture || "-"}</div>
+                <div className="chips-row">
+                  <span className="chip">検索件数: {candidateProducts.length}</span>
+                  <span className="chip">選択商品: {selectedCode || "-"}</span>
+                  <span className="chip">配送先: {prefecture || "-"}</span>
                 </div>
               </div>
             </section>
 
-            <section className="card">
-              <div className="card-header">
+            <section className="panel">
+              <div className="panel-header">
                 <h2>検索候補一覧</h2>
               </div>
 
-              <div className="card-body compact-list-wrap">
+              <div className="panel-body">
                 {candidateProducts.length === 0 ? (
                   <div className="empty-text">該当する商品がありません</div>
                 ) : (
-                  <div className="candidate-list">
+                  <div className="candidate-grid">
                     {candidateProducts.map((product) => {
                       const code = getProductCode(product);
                       const name = getProductName(product);
@@ -337,21 +327,15 @@ export default function App() {
                         <button
                           key={`${code}-${name}`}
                           type="button"
-                          className={`candidate-item ${isActive ? "active" : ""}`}
+                          className={`candidate-card ${isActive ? "active" : ""}`}
                           onClick={() => setSelectedProduct(product)}
                         >
                           <div className="candidate-code">{code || "-"}</div>
                           <div className="candidate-name">{name || "(名称なし)"}</div>
-                          <div className="candidate-meta">
-                            <span>
-                              佐川サイズ: {toNumber(product?.["佐川サイズ"]) || "-"}
-                            </span>
-                            <span>
-                              西濃重量: {toNumber(product?.["西濃重量"]) || "-"}
-                            </span>
-                            <span>
-                              久留米重量: {toNumber(product?.["久留米重量"]) || "-"}
-                            </span>
+                          <div className="candidate-sub">
+                            <span>佐川サイズ: {toNumber(product?.["佐川サイズ"]) || "-"}</span>
+                            <span>西濃重量: {toNumber(product?.["西濃重量"]) || "-"}</span>
+                            <span>久留米重量: {toNumber(product?.["久留米重量"]) || "-"}</span>
                           </div>
                         </button>
                       );
@@ -361,73 +345,98 @@ export default function App() {
               </div>
             </section>
 
-            <section className="card">
-              <div className="card-header">
+            <section className="panel">
+              <div className="panel-header">
                 <h2>運賃結果</h2>
               </div>
 
-              <div className="card-body">
+              <div className="panel-body">
                 {!selectedProduct ? (
                   <div className="empty-text">商品を選択してください</div>
                 ) : (
                   <>
-                    <div className="result-top-card">
-                      <div className="result-top-main">
-                        <div className="result-top-title">最安候補</div>
-                        <div className="result-top-product">
-                          {getDisplayLabel(selectedProduct)}
+                    <div className="hero-card">
+                      <div className="hero-left">
+                        <div className="hero-label">最安候補</div>
+                        <div className="hero-price">
+                          {bestFare ? formatCurrency(bestFare.total) : "-"}
+                        </div>
+                        <div className="hero-chips">
+                          <span className="hero-chip">
+                            {bestFare ? normalizeCarrierName(bestFare.carrier) : "該当なし"}
+                          </span>
+                          <span className="hero-chip">
+                            候補元: {bestFare ? bestFare.source : "-"}
+                          </span>
+                          <span className="hero-chip">
+                            参照: {bestFare ? getRefTypeLabel(bestFare) : "-"}
+                          </span>
+                          <span className="hero-chip">
+                            地域: {bestFare ? toStr(bestFare.region) : "-"}
+                          </span>
                         </div>
                       </div>
-
-                      {bestFare ? (
-                        <div className="result-top-price-block">
-                          <div className="badge cheapest">最安</div>
-                          <div className="result-top-carrier">
-                            {normalizeCarrierName(bestFare.carrier)}
-                          </div>
-                          <div className="result-top-price">
-                            {formatCurrency(bestFare.total)}
-                          </div>
-                          <div className="result-top-sub">
-                            {bestFare.source} / {prefecture}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="result-top-price-block">
-                          <div className="result-top-carrier">該当なし</div>
-                        </div>
-                      )}
                     </div>
 
-                    <div className="selected-product-box">
-                      <div>
-                        <strong>品番:</strong> {selectedCode || "-"}
+                    <div className="info-grid">
+                      <div className="info-card info-card-wide">
+                        <div className="info-label">選択商品</div>
+                        <div className="info-value">{getDisplayLabel(selectedProduct)}</div>
                       </div>
-                      <div>
-                        <strong>品名:</strong> {selectedName || "-"}
+                      <div className="info-card">
+                        <div className="info-label">佐川サイズ</div>
+                        <div className="info-value">
+                          {toNumber(selectedProduct?.["佐川サイズ"]) || "-"}
+                        </div>
                       </div>
-                      <div>
-                        <strong>佐川サイズ:</strong>{" "}
-                        {toNumber(selectedProduct?.["佐川サイズ"]) || "-"}
+                      <div className="info-card">
+                        <div className="info-label">西濃重量</div>
+                        <div className="info-value">
+                          {toNumber(selectedProduct?.["西濃重量"]) || "-"}
+                        </div>
                       </div>
-                      <div>
-                        <strong>西濃重量:</strong>{" "}
-                        {toNumber(selectedProduct?.["西濃重量"]) || "-"}
+                      <div className="info-card">
+                        <div className="info-label">久留米重量</div>
+                        <div className="info-value">
+                          {toNumber(selectedProduct?.["久留米重量"]) || "-"}
+                        </div>
                       </div>
-                      <div>
-                        <strong>久留米重量:</strong>{" "}
-                        {toNumber(selectedProduct?.["久留米重量"]) || "-"}
+                      <div className="info-card">
+                        <div className="info-label">送り先</div>
+                        <div className="info-value">{prefecture || "-"}</div>
                       </div>
-                      <div>
-                        <strong>西濃別表:</strong>{" "}
-                        {toStr(selectedProduct?.["西濃別表"]) || "0"}
+                      <div className="info-card">
+                        <div className="info-label">運送便①</div>
+                        <div className="info-value">
+                          {toStr(selectedProduct?.["運送便①"]) || "-"}
+                        </div>
+                      </div>
+                      <div className="info-card">
+                        <div className="info-label">運送便②</div>
+                        <div className="info-value">
+                          {toStr(selectedProduct?.["運送便②"]) || "-"}
+                        </div>
+                      </div>
+                      <div className="info-card">
+                        <div className="info-label">運送便③</div>
+                        <div className="info-value">
+                          {toStr(selectedProduct?.["運送便③"]) || "-"}
+                        </div>
+                      </div>
+                      <div className="info-card">
+                        <div className="info-label">西濃別表</div>
+                        <div className="info-value">
+                          {toStr(selectedProduct?.["西濃別表"]) || "0"}
+                        </div>
+                      </div>
+                      <div className="info-card">
+                        <div className="info-label">表示候補数</div>
+                        <div className="info-value">{fareResults.length}</div>
                       </div>
                     </div>
 
                     {fareResults.length === 0 ? (
-                      <div className="empty-text">
-                        表示できる運賃候補がありません
-                      </div>
+                      <div className="empty-text">表示できる運賃候補がありません</div>
                     ) : (
                       <div className="table-wrap">
                         <table className="result-table">
@@ -441,8 +450,8 @@ export default function App() {
                               <th>参照値</th>
                               <th>地域</th>
                               <th>運賃</th>
-                              <th>離島</th>
-                              <th>中継</th>
+                              <th>離島加算</th>
+                              <th>中継料</th>
                               <th>合計</th>
                               <th>状態</th>
                             </tr>
@@ -450,9 +459,7 @@ export default function App() {
                           <tbody>
                             {fareResults.map((row) => {
                               const carrier = normalizeCarrierName(row.carrier);
-                              const originalCarrier = normalizeCarrierName(
-                                row.originalCarrier
-                              );
+                              const originalCarrier = normalizeCarrierName(row.originalCarrier);
 
                               return (
                                 <tr
@@ -469,16 +476,12 @@ export default function App() {
                                   <td>{formatCurrency(row.fare)}</td>
                                   <td>{formatCurrency(row.islandFee)}</td>
                                   <td>{formatCurrency(row.relayFee)}</td>
-                                  <td className="total-cell">
-                                    {formatCurrency(row.total)}
-                                  </td>
+                                  <td className="total-cell">{formatCurrency(row.total)}</td>
                                   <td>
                                     {row.isCheapest ? (
-                                      <span className="badge cheapest">
-                                        {getStatusLabel(row)}
-                                      </span>
+                                      <span className="badge badge-best">最安</span>
                                     ) : (
-                                      "-"
+                                      <span className="badge badge-normal">候補</span>
                                     )}
                                   </td>
                                 </tr>

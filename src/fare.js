@@ -51,10 +51,9 @@ function roundUpTo100(value) {
   return Math.ceil(n / 100) * 100;
 }
 
+// ★修正：実重量のみ使用（m3完全無視）
 function getChargeableWeight(product) {
-  const actualWeight = toNumber(product?.["実重量"]);
-  const m3Weight = toNumber(product?.["m3重量"]);
-  return Math.max(actualWeight, m3Weight);
+  return toNumber(product?.["実重量"]);
 }
 
 function getSize(product) {
@@ -163,10 +162,10 @@ function calcFareForWeightCarrier({
   };
 }
 
-// ★入力条件チェック（今回の追加仕様）
+// ★重要：入力条件チェック
 function isValidInputForCarrier(carrier, size, weight) {
   if (isWeightCarrier(carrier)) {
-    return weight > 0;
+    return weight > 0; // 実重量ないと出さない
   } else {
     return size > 0;
   }
@@ -230,7 +229,7 @@ export function calculateFareResults({
     .map((candidate) => {
       const carrier = candidate.carrier;
 
-      // ★ここ重要（空白除外）
+      // ★ここで除外制御
       if (!isValidInputForCarrier(carrier, size, weight)) {
         return null;
       }

@@ -384,30 +384,7 @@ export default function App() {
                     </div>
 
                     <div className="meta-grid">
-                      <div className="meta-card meta-card-wide">
-                        <div className="meta-label">選択商品</div>
-                        <div className="meta-value">
-                          {getDisplayLabel(selectedProduct)}
-                        </div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">基準サイズ</div>
-                        <div className="meta-value">
-                          {toNumber(selectedProduct?.["佐川サイズ"]) || "-"}
-                        </div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">実重量</div>
-                        <div className="meta-value">-</div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">m3重量</div>
-                        <div className="meta-value">-</div>
-                      </div>
-
+                     
                       <div className="meta-card">
                         <div className="meta-label">送り先</div>
                         <div className="meta-value">{prefecture || "-"}</div>

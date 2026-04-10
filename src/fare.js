@@ -51,7 +51,7 @@ function roundUpTo100(value) {
   return Math.ceil(n / 100) * 100;
 }
 
-// ★実重量のみ使用（m3無視）
+// ★実重量のみ
 function getChargeableWeight(product) {
   return toNumber(product?.["実重量"]);
 }
@@ -91,7 +91,7 @@ function resolveRegionCode(regionRows, carrier, prefecture) {
   return rawRegion;
 }
 
-// ★修正：サイズ「以上で最小」マッチ
+// ★サイズ「以上で最小」
 function findSizeFareRow(carrierRows, carrier, size, region) {
   const c = normalizeCarrierName(carrier);
 
@@ -108,17 +108,29 @@ function findSizeFareRow(carrierRows, carrier, size, region) {
 }
 
 function findWeightFareRow(rows, region, weight) {
-  const targetRegion = toNumber(region);
-  const targetWeight = toNumber(weight);
-
   return (
     rows
-      .filter((row) => toNumber(row["地域"]) === targetRegion)
+      .filter((row) => toNumber(row["地域"]) === toNumber(region))
       .sort((a, b) => toNumber(a["重量"]) - toNumber(b["重量"]))
-      .find((row) => toNumber(row["重量"]) >= targetWeight) || null
+      .find((row) => toNumber(row["重量"]) >= weight) || null
   );
 }
 
+function calcFareForSizeCarrier({ carrierRows, carrier, size, region }) {
+  const row = findSizeFareRow(carrierRows, carrier, size, region);
+  if (!row) return null;
+
+  return {
+    calcType: "size",
+    matchedSize: toNumber(row["サイズ"]),
+    matchedWeight: 0,
+    fare: toNumber(row["運賃"]),
+    islandFee: toNumber(row["離島加算"]),
+    relayFee: toNumber(row["中継料"]),
+  };
+}
+
+// ★久留米 fallback対応
 function calcFareForWeightCarrier({
   carrier,
   carriersRows,
@@ -135,11 +147,11 @@ function calcFareForWeightCarrier({
   }
 
   if (c === "久留米") {
-    // ★久留米専用が無ければ西濃を使う
     const kurumeRows = carriersRows.filter(
       (r) => normalizeCarrierName(r["運送会社"]) === "久留米"
     );
 
+    // ★ここが重要（fallback）
     rows = kurumeRows.length > 0 ? kurumeRows : seinoRows;
   }
 
@@ -156,39 +168,7 @@ function calcFareForWeightCarrier({
   };
 }
 
-function calcFareForWeightCarrier({
-  carrier,
-  carriersRows,
-  seinoRows,
-  weight,
-  region,
-}) {
-  const c = normalizeCarrierName(carrier);
-
-  let rows = [];
-
-  if (c === "西濃") rows = seinoRows;
-
-  if (c === "久留米") {
-    rows = carriersRows.filter(
-      (r) => normalizeCarrierName(r["運送会社"]) === "久留米"
-    );
-  }
-
-  const row = findWeightFareRow(rows, region, weight);
-  if (!row) return null;
-
-  return {
-    calcType: "weight",
-    matchedSize: 0,
-    matchedWeight: toNumber(row["重量"]),
-    fare: toNumber(row["運賃"]),
-    islandFee: toNumber(row["離島加算"]),
-    relayFee: toNumber(row["中継料"]),
-  };
-}
-
-// ★入力条件チェック
+// ★入力制御
 function isValidInputForCarrier(carrier, size, weight) {
   if (isWeightCarrier(carrier)) {
     return weight > 0;
@@ -209,12 +189,12 @@ function buildCandidates(product, prefecture) {
 
     let carrier = originalCarrier;
 
+    // ★西濃→久留米変換
     if (useKurume && originalCarrier === "西濃") {
       carrier = "久留米";
     }
 
-    if (!kyushu && carrier === "久留米") return;
-
+    // ★ここ修正：久留米は常に通す（削除してた条件を廃止）
     candidates.push({
       slot: index + 1,
       source: field,

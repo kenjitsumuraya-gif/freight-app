@@ -99,7 +99,7 @@ export default function App() {
   const [loadError, setLoadError] = useState("");
 
   const [searchText, setSearchText] = useState("");
-  const [prefecture, setPrefecture] = useState("愛媛県");
+  const [prefecture, setPrefecture] = useState("宮崎県");
   const [selectedProductKey, setSelectedProductKey] = useState("");
 
   useEffect(() => {
@@ -176,13 +176,15 @@ export default function App() {
     if (!selectedProduct || !prefecture) return [];
 
     try {
-      return buildFareResults({
+      const results = buildFareResults({
         product: selectedProduct,
         prefecture,
         carrierRegions,
         carriers,
         carriersSeino,
       });
+
+      return Array.isArray(results) ? results : [];
     } catch (error) {
       console.error(error);
       return [];
@@ -367,6 +369,9 @@ export default function App() {
                   <span className="best-fare-chip">
                     地域: {bestResult?.region || "-"}
                   </span>
+                  {bestResult?.displayCarrierNote ? (
+                    <span className="best-fare-chip">{bestResult.displayCarrierNote}</span>
+                  ) : null}
                 </div>
               </div>
 
@@ -401,12 +406,37 @@ export default function App() {
                 </div>
               </div>
 
+              <div className="selected-product-summary" style={{ marginTop: "-4px" }}>
+                <div className="summary-row">
+                  <span className="summary-label">運送便①</span>
+                  <span className="summary-value">{toStr(selectedProduct["運送便①"]) || "-"}</span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">運送便②</span>
+                  <span className="summary-value">{toStr(selectedProduct["運送便②"]) || "-"}</span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">運送便③</span>
+                  <span className="summary-value">{toStr(selectedProduct["運送便③"]) || "-"}</span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">西濃別表</span>
+                  <span className="summary-value">{toStr(selectedProduct["西濃別表"]) || "-"}</span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">表示候補数</span>
+                  <span className="summary-value">{fareResults.length}</span>
+                </div>
+              </div>
+
               <div className="table-scroll">
                 <table className="data-table result-table">
                   <thead>
                     <tr>
                       <th>運送会社</th>
+                      <th>元候補</th>
                       <th>候補元</th>
+                      <th>変換</th>
                       <th>参照</th>
                       <th>参照値</th>
                       <th>地域</th>
@@ -420,11 +450,13 @@ export default function App() {
                   <tbody>
                     {fareResults.map((row, index) => (
                       <tr
-                        key={`${row.carrier}-${row.source}-${index}`}
+                        key={`${row.carrier}-${row.originalCarrier}-${row.source}-${index}`}
                         className={row.isCheapest ? "is-cheapest" : ""}
                       >
                         <td>{row.carrier}</td>
+                        <td>{row.originalCarrier || "-"}</td>
                         <td>{row.candidateLabel}</td>
+                        <td>{row.displayCarrierNote || "-"}</td>
                         <td>{getCalcTypeLabel(row)}</td>
                         <td>{getReferenceValueLabel(row)}</td>
                         <td>{row.region || "-"}</td>

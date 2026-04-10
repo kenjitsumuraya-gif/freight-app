@@ -1,19 +1,10 @@
 // src/fare.js
 
-const KYUSHU_PREFECTURES = new Set([
-  "福岡県",
-  "佐賀県",
-  "長崎県",
-  "熊本県",
-  "大分県",
-  "宮崎県",
-  "鹿児島県",
-]);
-
 const CANDIDATE_FIELDS = ["運送便①", "運送便②", "運送便③"];
 
 function toStr(value) {
-  return value == null ? "" : String(value).trim();
+  if (value == null) return "";
+  return String(value).trim();
 }
 
 function toNumber(value) {
@@ -59,66 +50,109 @@ function getSize(product) {
 
 function findRegionRow(regionRows, carrier, prefecture) {
   const c = normalizeCarrierName(carrier);
-  const p = toStr(prefecture);
+  const p = toStr(prefecture).replace(/\s/g, "");
 
   return (
-    regionRows.find(
-      (r) =>
+    regionRows.find((r) => {
+      return (
         normalizeCarrierName(r["運送会社"]) === c &&
-        toStr(r["都道府県"]).replace(/\s/g, "") === p.replace(/\s/g, "")
-    ) || null
+        toStr(r["都道府県"]).replace(/\s/g, "") === p
+      );
+    }) || null
   );
 }
 
-function resolveRegionCode(regionRows, carrier, prefecture) {
+function resolveRegionValue(regionRows, carrier, prefecture) {
   const row = findRegionRow(regionRows, carrier, prefecture);
-  if (!row) return 0;
+  if (!row) return "";
 
-  const rawRegion = toNumber(row["地域"]);
+  const c = normalizeCarrierName(carrier);
+  const rawRegion = row["地域"];
 
-  if (normalizeCarrierName(carrier) === "西濃") {
+  if (c === "西濃") {
     return roundUpTo100(rawRegion);
   }
 
-  return rawRegion;
+  if (c === "久留米") {
+    return toNumber(rawRegion);
+  }
+
+  return toStr(rawRegion);
 }
 
 function findSizeFareRow(carrierRows, carrier, size, region) {
   const c = normalizeCarrierName(carrier);
+  const targetSize = toNumber(size);
+  const targetRegion = toStr(region).replace(/\s/g, "");
 
-  return (
-    carrierRows.find(
-      (row) =>
-        normalizeCarrierName(row["運送会社"]) === c &&
-        toNumber(row["サイズ"]) === size &&
-        toNumber(row["地域"]) === region
-    ) || null
-  );
+  const rows = carrierRows.filter((row) => {
+    return (
+      normalizeCarrierName(row["運送会社"]) === c &&
+      toStr(row["地域"]).replace(/\s/g, "") === targetRegion
+    );
+  });
+
+  if (!rows.length) return null;
+
+  const exact = rows.find((row) => toNumber(row["サイズ"]) === targetSize);
+  if (exact) return exact;
+
+  const larger = rows
+    .filter((row) => toNumber(row["サイズ"]) >= targetSize)
+    .sort((a, b) => toNumber(a["サイズ"]) - toNumber(b["サイズ"]))[0];
+
+  if (larger) return larger;
+
+  const maxRow = rows
+    .filter((row) => toNumber(row["サイズ"]) > 0)
+    .sort((a, b) => toNumber(b["サイズ"]) - toNumber(a["サイズ"]))[0];
+
+  return maxRow || null;
 }
 
 function findWeightFareRow(rows, region, weight) {
   const targetRegion = toNumber(region);
   const targetWeight = toNumber(weight);
 
-  return (
-    rows
-      .filter((row) => toNumber(row["地域"]) === targetRegion)
-      .sort((a, b) => toNumber(a["重量"]) - toNumber(b["重量"]))
-      .find((row) => toNumber(row["重量"]) >= targetWeight) || null
+  const regionRows = rows.filter(
+    (row) => toNumber(row["地域"]) === targetRegion
   );
+
+  if (!regionRows.length) return null;
+
+  const exact = regionRows.find(
+    (row) => toNumber(row["重量"]) === targetWeight
+  );
+  if (exact) return exact;
+
+  const larger = regionRows
+    .filter((row) => toNumber(row["重量"]) >= targetWeight)
+    .sort((a, b) => toNumber(a["重量"]) - toNumber(b["重量"]))[0];
+
+  if (larger) return larger;
+
+  const maxRow = regionRows
+    .sort((a, b) => toNumber(b["重量"]) - toNumber(a["重量"]))[0];
+
+  return maxRow || null;
 }
 
 function calcFareForSizeCarrier({ carrierRows, carrier, size, region }) {
   const row = findSizeFareRow(carrierRows, carrier, size, region);
   if (!row) return null;
 
+  const fare = toNumber(row["運賃"]);
+  const islandFee = toNumber(row["離島加算"]);
+  const relayFee = toNumber(row["中継料"]);
+
   return {
     calcType: "size",
     matchedSize: toNumber(row["サイズ"]),
     matchedWeight: 0,
-    fare: toNumber(row["運賃"]),
-    islandFee: toNumber(row["離島加算"]),
-    relayFee: toNumber(row["中継料"]),
+    fare,
+    islandFee,
+    relayFee,
+    total: fare + islandFee + relayFee,
   };
 }
 
@@ -131,25 +165,48 @@ function calcFareForWeightCarrier({
 }) {
   const c = normalizeCarrierName(carrier);
 
-  let rows = [];
+  if (c === "西濃") {
+    const row = findWeightFareRow(seinoRows, region, weight);
+    if (!row) return null;
 
-  if (c === "西濃") rows = seinoRows;
-  if (c === "久留米")
-    rows = carriersRows.filter(
+    const fare = toNumber(row["運賃"]);
+    const islandFee = toNumber(row["離島加算"]);
+    const relayFee = toNumber(row["中継料"] ?? row["中継加算"]);
+
+    return {
+      calcType: "weight",
+      matchedSize: 0,
+      matchedWeight: toNumber(row["重量"]),
+      fare,
+      islandFee,
+      relayFee,
+      total: fare + islandFee + relayFee,
+    };
+  }
+
+  if (c === "久留米") {
+    const kurumeRows = carriersRows.filter(
       (r) => normalizeCarrierName(r["運送会社"]) === "久留米"
     );
+    const row = findWeightFareRow(kurumeRows, region, weight);
+    if (!row) return null;
 
-  const row = findWeightFareRow(rows, region, weight);
-  if (!row) return null;
+    const fare = toNumber(row["運賃"]);
+    const islandFee = toNumber(row["離島加算"]);
+    const relayFee = toNumber(row["中継料"]);
 
-  return {
-    calcType: "weight",
-    matchedSize: 0,
-    matchedWeight: toNumber(row["重量"]),
-    fare: toNumber(row["運賃"]),
-    islandFee: toNumber(row["離島加算"]),
-    relayFee: toNumber(row["中継料"]),
-  };
+    return {
+      calcType: "weight",
+      matchedSize: 0,
+      matchedWeight: toNumber(row["重量"]),
+      fare,
+      islandFee,
+      relayFee,
+      total: fare + islandFee + relayFee,
+    };
+  }
+
+  return null;
 }
 
 function buildCandidates(product) {
@@ -174,6 +231,10 @@ function buildCandidates(product) {
 
 function sortResults(results) {
   return [...results].sort((a, b) => {
+    const aRank = a.error ? 1 : 0;
+    const bRank = b.error ? 1 : 0;
+
+    if (aRank !== bRank) return aRank - bRank;
     if (a.total !== b.total) return a.total - b.total;
     return a.priorityIndex - b.priorityIndex;
   });
@@ -189,16 +250,34 @@ export function calculateFareResults({
   if (!product || !prefecture) return [];
 
   const size = getSize(product);
-  const weight = getChargeableWeight(product);
+  const chargeableWeight = getChargeableWeight(product);
   const candidates = buildCandidates(product);
 
   const results = candidates.map((candidate) => {
     const carrier = candidate.carrier;
-    const region = resolveRegionCode(
-      carrierRegions,
-      carrier,
-      prefecture
-    );
+    const region = resolveRegionValue(carrierRegions, carrier, prefecture);
+
+    if (
+      region === "" ||
+      region === 0 ||
+      region === null ||
+      region === undefined
+    ) {
+      return {
+        ...candidate,
+        region: "",
+        size,
+        chargeableWeight,
+        calcType: isWeightCarrier(carrier) ? "weight" : "size",
+        matchedSize: 0,
+        matchedWeight: 0,
+        fare: 0,
+        islandFee: 0,
+        relayFee: 0,
+        total: 0,
+        error: "地域未一致",
+      };
+    }
 
     let fareResult = null;
 
@@ -207,7 +286,7 @@ export function calculateFareResults({
         carrier,
         carriersRows: carriers,
         seinoRows: carriersSeino,
-        weight,
+        weight: chargeableWeight,
         region,
       });
     } else {
@@ -224,40 +303,43 @@ export function calculateFareResults({
         ...candidate,
         region,
         size,
-        chargeableWeight: weight,
+        chargeableWeight,
+        calcType: isWeightCarrier(carrier) ? "weight" : "size",
+        matchedSize: 0,
+        matchedWeight: 0,
+        fare: 0,
+        islandFee: 0,
+        relayFee: 0,
         total: 0,
-        error: "未一致",
+        error: "運賃表未一致",
       };
     }
-
-    const total =
-      fareResult.fare +
-      fareResult.islandFee +
-      fareResult.relayFee;
 
     return {
       ...candidate,
       region,
       size,
-      chargeableWeight: weight,
+      chargeableWeight,
       ...fareResult,
-      total,
       error: "",
     };
   });
 
   const sorted = sortResults(results);
-  const cheapest =
-    sorted.length > 0
-      ? Math.min(...sorted.map((r) => r.total || Infinity))
-      : null;
+
+  const validResults = sorted.filter((row) => !row.error);
+  const cheapestTotal = validResults.length ? validResults[0].total : null;
 
   return sorted.map((row) => ({
     ...row,
-    isCheapest: row.total === cheapest,
-    cheapestBadge: row.total === cheapest ? "最安" : "",
+    isCheapest:
+      !row.error && cheapestTotal != null && row.total === cheapestTotal,
+    cheapestBadge:
+      !row.error && cheapestTotal != null && row.total === cheapestTotal
+        ? "最安"
+        : "",
     candidateLabel: `候補元: ${row.source}`,
-    displayCarrierNote: "",
+    displayCarrierNote: row.replacedFromSeino ? "西濃→久留米" : "",
   }));
 }
 
@@ -267,5 +349,5 @@ export function buildFareResults(params) {
 
 export function findBestFare(params) {
   const results = calculateFareResults(params);
-  return results.find((r) => r.isCheapest) || null;
+  return results.find((row) => row.isCheapest) || null;
 }

@@ -51,7 +51,7 @@ function roundUpTo100(value) {
   return Math.ceil(n / 100) * 100;
 }
 
-// ★修正：実重量のみ使用（m3完全無視）
+// ★実重量のみ使用（m3無視）
 function getChargeableWeight(product) {
   return toNumber(product?.["実重量"]);
 }
@@ -91,16 +91,19 @@ function resolveRegionCode(regionRows, carrier, prefecture) {
   return rawRegion;
 }
 
+// ★修正：サイズ「以上で最小」マッチ
 function findSizeFareRow(carrierRows, carrier, size, region) {
   const c = normalizeCarrierName(carrier);
 
+  const rows = carrierRows.filter(
+    (row) => normalizeCarrierName(row["運送会社"]) === c
+  );
+
   return (
-    carrierRows.find(
-      (row) =>
-        normalizeCarrierName(row["運送会社"]) === c &&
-        toNumber(row["サイズ"]) === size &&
-        toNumber(row["地域"]) === region
-    ) || null
+    rows
+      .filter((row) => toNumber(row["地域"]) === region)
+      .sort((a, b) => toNumber(a["サイズ"]) - toNumber(b["サイズ"]))
+      .find((row) => toNumber(row["サイズ"]) >= size) || null
   );
 }
 
@@ -162,10 +165,10 @@ function calcFareForWeightCarrier({
   };
 }
 
-// ★重要：入力条件チェック
+// ★入力条件チェック
 function isValidInputForCarrier(carrier, size, weight) {
   if (isWeightCarrier(carrier)) {
-    return weight > 0; // 実重量ないと出さない
+    return weight > 0;
   } else {
     return size > 0;
   }
@@ -229,7 +232,6 @@ export function calculateFareResults({
     .map((candidate) => {
       const carrier = candidate.carrier;
 
-      // ★ここで除外制御
       if (!isValidInputForCarrier(carrier, size, weight)) {
         return null;
       }

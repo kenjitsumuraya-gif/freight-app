@@ -62,6 +62,11 @@ function getSize(product) {
   return toNumber(product?.["基準サイズ"]);
 }
 
+function isSeinoKurumeFlagOn(product) {
+  const raw = toStr(product?.["西濃別表"]);
+  return raw === "1" || raw.toLowerCase() === "true";
+}
+
 function findRegionRow(regionRows, carrier, prefecture) {
   const c = normalizeCarrierName(carrier);
   const p = toStr(prefecture);
@@ -88,6 +93,7 @@ function resolveRegionCode(regionRows, carrier, prefecture) {
   if (!row) return 0;
 
   const rawRegion = toNumber(row["地域"]);
+
   if (normalizeCarrierName(carrier) === "西濃") {
     return roundUpTo100(rawRegion);
   }
@@ -204,46 +210,36 @@ function calcFareForWeightCarrier({
 
 function buildCandidates(product, prefecture) {
   const kyushu = isKyushu(prefecture);
+  const useKurumeInsteadOfSeino = kyushu && isSeinoKurumeFlagOn(product);
+
   const candidates = [];
 
   CANDIDATE_FIELDS.forEach((field, index) => {
     const originalCarrier = normalizeCarrierName(product?.[field]);
     if (!originalCarrier) return;
 
-    const base = {
-      slot: index + 1,
-      source: field,
-      originalCarrier,
-      priorityIndex: index + 1,
-    };
+    let carrier = originalCarrier;
 
-    // 九州では「西濃」が入っている枠に対して
-    // 久留米を優先追加し、西濃も残す
-    if (kyushu && originalCarrier === "西濃") {
-      candidates.push({
-        ...base,
-        carrier: "久留米",
-        priorityBoost: true,
-      });
-
-      candidates.push({
-        ...base,
-        carrier: "西濃",
-        priorityBoost: false,
-      });
-
-      return;
+    // 九州かつ西濃別表フラグONのときだけ、西濃→久留米に置換
+    if (useKurumeInsteadOfSeino && originalCarrier === "西濃") {
+      carrier = "久留米";
     }
 
     // 九州以外では久留米を候補に出さない
-    if (!kyushu && originalCarrier === "久留米") {
+    if (!kyushu && carrier === "久留米") {
       return;
     }
 
     candidates.push({
-      ...base,
-      carrier: originalCarrier,
-      priorityBoost: false,
+      slot: index + 1,
+      source: field,
+      originalCarrier,
+      carrier,
+      priorityIndex: index + 1,
+      replacedFromSeino:
+        useKurumeInsteadOfSeino &&
+        originalCarrier === "西濃" &&
+        carrier === "久留米",
     });
   });
 
@@ -255,9 +251,6 @@ function sortResults(results) {
     if (a.total !== b.total) return a.total - b.total;
     if (a.priorityIndex !== b.priorityIndex) {
       return a.priorityIndex - b.priorityIndex;
-    }
-    if (a.priorityBoost !== b.priorityBoost) {
-      return a.priorityBoost ? -1 : 1;
     }
     return a.slot - b.slot;
   });
@@ -354,6 +347,7 @@ export function calculateFareResults({
     cheapestBadge:
       cheapestTotal != null && row.total === cheapestTotal ? "最安" : "",
     candidateLabel: `候補元: ${row.source}`,
+    displayCarrierNote: row.replacedFromSeino ? "西濃→久留米" : "",
   }));
 }
 

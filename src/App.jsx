@@ -411,11 +411,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="meta-card">
-                        <div className="meta-label">西濃別表</div>
-                        <div className="meta-value">
-                          {toStr(selectedProduct?.["西濃別表"]) || "0"}
-                        </div>
+                      
                       </div>
                     </div>
 

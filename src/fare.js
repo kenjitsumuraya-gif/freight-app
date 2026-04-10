@@ -114,18 +114,36 @@ function roundUpTo100(value) {
   return Math.ceil(n / 100) * 100;
 }
 
-// m3重量は使わない
-function getChargeableWeight(product) {
-  return toNumber(product?.["実重量"]);
-}
-
-function getSize(product) {
-  return toNumber(product?.["基準サイズ"]);
-}
-
 function isSeinoSpecialTableOn(product) {
   const raw = toStr(product?.["西濃別表"]).toLowerCase();
   return raw === "1" || raw === "true";
+}
+
+function getSagawaSize(product) {
+  return toNumber(product?.["佐川サイズ"]);
+}
+
+function getSeinoWeight(product) {
+  return toNumber(product?.["西濃重量"]);
+}
+
+function getKurumeWeight(product) {
+  return toNumber(product?.["久留米重量"]);
+}
+
+function getReferenceValue(product, carrier) {
+  const c = normalizeCarrierName(carrier);
+
+  if (c === "佐川") return getSagawaSize(product);
+  if (c === "西濃") return getSeinoWeight(product);
+  if (c === "久留米") return getKurumeWeight(product);
+
+  return 0;
+}
+
+function getReferenceType(carrier) {
+  const c = normalizeCarrierName(carrier);
+  return isWeightCarrier(c) ? "weight" : "size";
 }
 
 function findRegionRow(regionRows, carrier, prefecture) {
@@ -340,14 +358,14 @@ export function calculateFareResults({
 }) {
   if (!product || !prefecture) return [];
 
-  const size = getSize(product);
-  const chargeableWeight = getChargeableWeight(product);
   const useSeinoSpecialTable = isSeinoSpecialTableOn(product);
   const candidates = buildCandidates(product);
 
   const rawResults = candidates.map((candidate) => {
     const carrier = candidate.carrier;
     const region = resolveRegionValue(carrierRegions, carrier, prefecture);
+    const refType = getReferenceType(carrier);
+    const refValue = getReferenceValue(product, carrier);
 
     if (
       region === "" ||
@@ -358,14 +376,18 @@ export function calculateFareResults({
       return null;
     }
 
+    if (refValue <= 0) {
+      return null;
+    }
+
     let fareResult = null;
 
-    if (isWeightCarrier(carrier)) {
+    if (refType === "weight") {
       fareResult = calcFareForWeightCarrier({
         carrier,
         carriersRows: carriers,
         seinoRows: carriersSeino,
-        weight: chargeableWeight,
+        weight: refValue,
         region,
         useSeinoSpecialTable,
       });
@@ -373,7 +395,7 @@ export function calculateFareResults({
       fareResult = calcFareForSizeCarrier({
         carrierRows: carriers,
         carrier,
-        size,
+        size: refValue,
         region,
       });
     }
@@ -384,8 +406,7 @@ export function calculateFareResults({
     return {
       ...candidate,
       region,
-      size,
-      chargeableWeight,
+      referenceValue: refValue,
       ...fareResult,
     };
   });

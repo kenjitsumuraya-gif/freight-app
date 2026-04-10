@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./App.css";
-import { loadCsv } from "./csv.js";
-import { buildFareResults } from "./fare.js";
+import { buildFareResults, findBestFare } from "./fare";
+import * as csvModule from "./csv";
+
+const loadCsvFn = csvModule.loadCsv || csvModule.loadCSV;
 
 const PREFECTURES = [
   "北海道",
@@ -59,427 +61,440 @@ function toStr(value) {
 
 function toNumber(value) {
   if (value == null || value === "") return 0;
-  const normalized = String(value).replace(/,/g, "").trim();
+  const normalized = String(value)
+    .replace(/,/g, "")
+    .replace(/[^\d.-]/g, "")
+    .trim();
   const num = Number(normalized);
   return Number.isFinite(num) ? num : 0;
 }
 
-function formatYen(value) {
+function normalizeCarrierName(name) {
+  const v = toStr(name);
+  if (!v) return "";
+  if (v.includes("西濃")) return "西濃";
+  if (v.includes("久留米")) return "久留米";
+  if (v.includes("佐川")) return "佐川";
+  if (v.includes("ヤマト")) return "ヤマト";
+  if (v.includes("福山")) return "福山通運";
+  return v;
+}
+
+function formatCurrency(value) {
   const num = toNumber(value);
   return `¥${num.toLocaleString("ja-JP")}`;
 }
 
-function getProductKey(product) {
-  return `${toStr(product?.["品番"])}__${toStr(product?.["品名"])}`;
+function getProductCode(product) {
+  return toStr(
+    product?.["品番"] ??
+      product?.["商品コード"] ??
+      product?.["コード"] ??
+      product?.["品目コード"]
+  );
 }
 
-function getCalcTypeLabel(row) {
-  if (row?.calcType === "weight") return "重量";
-  if (row?.calcType === "size") return "サイズ";
-  return "-";
+function getProductName(product) {
+  return toStr(product?.["品名"] ?? product?.["商品名"] ?? product?.["名称"]);
 }
 
-function getReferenceValueLabel(row) {
+function getDisplayLabel(product) {
+  const code = getProductCode(product);
+  const name = getProductName(product);
+
+  if (code && name) return `${code} / ${name}`;
+  return code || name || "(名称なし)";
+}
+
+function includesKeyword(product, keyword) {
+  const q = toStr(keyword).toLowerCase();
+  if (!q) return true;
+
+  const code = getProductCode(product).toLowerCase();
+  const name = getProductName(product).toLowerCase();
+
+  return code.includes(q) || name.includes(q);
+}
+
+function getRefTypeLabel(row) {
+  return row?.calcType === "weight" ? "重量" : "サイズ";
+}
+
+function getRefValue(row) {
   if (row?.calcType === "weight") {
-    return row?.matchedWeight ? `${row.matchedWeight}` : `${row.chargeableWeight || 0}`;
+    return toNumber(row?.matchedWeight || row?.referenceValue || 0);
   }
-  if (row?.calcType === "size") {
-    return row?.matchedSize ? `${row.matchedSize}` : `${row.size || 0}`;
-  }
-  return "-";
+  return toNumber(row?.matchedSize || row?.referenceValue || 0);
+}
+
+function getStatusLabel(row) {
+  if (!row) return "";
+  return row.cheapestBadge || "";
 }
 
 export default function App() {
   const [products, setProducts] = useState([]);
-  const [carrierRegions, setCarrierRegions] = useState([]);
   const [carriers, setCarriers] = useState([]);
   const [carriersSeino, setCarriersSeino] = useState([]);
+  const [carrierRegions, setCarrierRegions] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  const [searchText, setSearchText] = useState("");
-  const [prefecture, setPrefecture] = useState("宮崎県");
-  const [selectedProductKey, setSelectedProductKey] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [prefecture, setPrefecture] = useState("大阪府");
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let active = true;
 
-    async function fetchAllCsv() {
+    async function fetchAll() {
       try {
         setLoading(true);
         setLoadError("");
 
-        const [productsData, carrierRegionsData, carriersData, carriersSeinoData] =
+        if (!loadCsvFn) {
+          throw new Error("csv.js に loadCsv または loadCSV が見つかりません。");
+        }
+
+        const [productsData, carriersData, seinoData, regionsData] =
           await Promise.all([
-            loadCsv("/products.csv"),
-            loadCsv("/carrier_regions.csv"),
-            loadCsv("/carriers.csv"),
-            loadCsv("/carriers_seino.csv"),
+            loadCsvFn("/products.csv"),
+            loadCsvFn("/carriers.csv"),
+            loadCsvFn("/carriers_seino.csv"),
+            loadCsvFn("/carrier_regions.csv"),
           ]);
 
-        if (cancelled) return;
+        if (!active) return;
 
         setProducts(Array.isArray(productsData) ? productsData : []);
-        setCarrierRegions(Array.isArray(carrierRegionsData) ? carrierRegionsData : []);
         setCarriers(Array.isArray(carriersData) ? carriersData : []);
-        setCarriersSeino(Array.isArray(carriersSeinoData) ? carriersSeinoData : []);
+        setCarriersSeino(Array.isArray(seinoData) ? seinoData : []);
+        setCarrierRegions(Array.isArray(regionsData) ? regionsData : []);
       } catch (error) {
-        if (cancelled) return;
-        setLoadError("CSVの読み込みに失敗しました。ファイル名と配置を確認してください。");
-        console.error(error);
+        if (!active) return;
+        setLoadError(error?.message || "CSVの読み込みに失敗しました。");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     }
 
-    fetchAllCsv();
+    fetchAll();
 
     return () => {
-      cancelled = true;
+      active = false;
     };
   }, []);
 
-  const filteredProducts = useMemo(() => {
-    const keyword = toStr(searchText).toLowerCase();
+  const candidateProducts = useMemo(() => {
+    const list = products.filter((product) => includesKeyword(product, keyword));
 
-    const sorted = [...products].sort((a, b) => {
-      const aCode = toStr(a["品番"]);
-      const bCode = toStr(b["品番"]);
+    list.sort((a, b) => {
+      const aCode = getProductCode(a);
+      const bCode = getProductCode(b);
       return aCode.localeCompare(bCode, "ja");
     });
 
-    if (!keyword) {
-      return sorted.slice(0, 100);
+    return list.slice(0, 100);
+  }, [products, keyword]);
+
+  useEffect(() => {
+    if (!candidateProducts.length) {
+      setSelectedProduct(null);
+      return;
     }
 
-    return sorted.filter((product) => {
-      const code = toStr(product["品番"]).toLowerCase();
-      const name = toStr(product["品名"]).toLowerCase();
-      return code.includes(keyword) || name.includes(keyword);
-    });
-  }, [products, searchText]);
-
-  const selectedProduct = useMemo(() => {
-    if (!selectedProductKey) return null;
-
-    return (
-      filteredProducts.find((product) => getProductKey(product) === selectedProductKey) ||
-      products.find((product) => getProductKey(product) === selectedProductKey) ||
-      null
+    const currentCode = getProductCode(selectedProduct);
+    const found = candidateProducts.find(
+      (item) => getProductCode(item) === currentCode
     );
-  }, [filteredProducts, products, selectedProductKey]);
+
+    if (!found) {
+      setSelectedProduct(candidateProducts[0]);
+    }
+  }, [candidateProducts, selectedProduct]);
 
   const fareResults = useMemo(() => {
     if (!selectedProduct || !prefecture) return [];
 
-    try {
-      const results = buildFareResults({
-        product: selectedProduct,
-        prefecture,
-        carrierRegions,
-        carriers,
-        carriersSeino,
-      });
-
-      return Array.isArray(results) ? results : [];
-    } catch (error) {
-      console.error(error);
-      return [];
-    }
+    return buildFareResults({
+      product: selectedProduct,
+      prefecture,
+      carrierRegions,
+      carriers,
+      carriersSeino,
+    });
   }, [selectedProduct, prefecture, carrierRegions, carriers, carriersSeino]);
 
-  const bestResult = fareResults.length > 0 ? fareResults[0] : null;
+  const bestFare = useMemo(() => {
+    if (!selectedProduct || !prefecture) return null;
 
-  function handleClear() {
-    setSearchText("");
-    setSelectedProductKey("");
-  }
+    return findBestFare({
+      product: selectedProduct,
+      prefecture,
+      carrierRegions,
+      carriers,
+      carriersSeino,
+    });
+  }, [selectedProduct, prefecture, carrierRegions, carriers, carriersSeino]);
 
-  function handleSelectProduct(product) {
-    setSelectedProductKey(getProductKey(product));
-  }
-
-  function handleSearchChange(event) {
-    setSearchText(event.target.value);
-    setSelectedProductKey("");
-  }
+  const selectedCode = getProductCode(selectedProduct);
+  const selectedName = getProductName(selectedProduct);
 
   return (
-    <div className="app-shell">
-      <header className="page-header">
-        <h1 className="page-title">品番・品名から運賃を調べるアプリ</h1>
-        <p className="page-subtitle">
-          品番の完全一致だけでなく、品名や品番の部分一致でも検索できます。商品CSVの運送便①〜③を見て候補運賃を表示します。
-        </p>
-      </header>
+    <div className="app">
+      <div className="container compact">
+        <header className="page-header">
+          <h1>運賃検索</h1>
+          <p>品番・品名から候補運送会社の運賃を比較</p>
+        </header>
 
-      <main className="layout-stack">
-        <section className="top-grid">
-          <div className="card panel-card">
-            <div className="card-header">
-              <h2 className="card-title">
-                <span className="card-title-icon">⌕</span>
-                <span>検索条件</span>
-              </h2>
-            </div>
-
-            <div className="form-block">
-              <div className="field-row">
-                <label className="field-label" htmlFor="searchText">
-                  品番または品名
-                </label>
-                <button type="button" className="clear-button" onClick={handleClear}>
-                  クリア
-                </button>
-              </div>
-
-              <input
-                id="searchText"
-                className="text-input"
-                type="text"
-                value={searchText}
-                onChange={handleSearchChange}
-                placeholder="品番または品名を入力"
-              />
-
-              <p className="field-help">
-                空欄でも一覧表示します。入力すると絞り込みます。
-              </p>
-            </div>
-
-            <div className="form-block">
-              <label className="field-label" htmlFor="prefecture">
-                送り先の都道府県
-              </label>
-
-              <select
-                id="prefecture"
-                className="select-input"
-                value={prefecture}
-                onChange={(e) => setPrefecture(e.target.value)}
-              >
-                {PREFECTURES.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {loading && (
+          <div className="card">
+            <div className="card-body">CSVを読み込み中です</div>
           </div>
+        )}
 
-          <div className="card panel-card">
-            <div className="card-header">
-              <h2 className="card-title">検索候補一覧</h2>
-            </div>
-
-            <div className="candidate-table-wrap">
-              <div className="table-scroll">
-                <table className="data-table candidate-table">
-                  <thead>
-                    <tr>
-                      <th>品番</th>
-                      <th>品名</th>
-                      <th>基準</th>
-                      <th>実重量</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan="4" className="empty-cell">
-                          CSVを読み込み中です。
-                        </td>
-                      </tr>
-                    ) : loadError ? (
-                      <tr>
-                        <td colSpan="4" className="empty-cell">
-                          {loadError}
-                        </td>
-                      </tr>
-                    ) : filteredProducts.length === 0 ? (
-                      <tr>
-                        <td colSpan="4" className="empty-cell">
-                          該当する商品がありません。
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredProducts.map((product) => {
-                        const productKey = getProductKey(product);
-                        const isSelected = selectedProductKey === productKey;
-
-                        return (
-                          <tr
-                            key={productKey}
-                            className={isSelected ? "is-selected" : ""}
-                            onClick={() => handleSelectProduct(product)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                handleSelectProduct(product);
-                              }
-                            }}
-                          >
-                            <td>{toStr(product["品番"])}</td>
-                            <td>{toStr(product["品名"])}</td>
-                            <td>{toStr(product["基準サイズ"])}</td>
-                            <td>{toStr(product["実重量"])}</td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+        {!loading && loadError && (
+          <div className="card">
+            <div className="card-body error-text">{loadError}</div>
           </div>
-        </section>
+        )}
 
-        <section className="card result-card">
-          <div className="card-header">
-            <h2 className="card-title">
-              <span className="card-title-icon">🚚</span>
-              <span>運賃結果</span>
-            </h2>
-          </div>
-
-          {!selectedProduct ? (
-            <div className="result-placeholder">
-              検索候補から商品を選択してください。
-            </div>
-          ) : fareResults.length === 0 ? (
-            <div className="result-placeholder">
-              運賃表に一致する候補がありません。
-            </div>
-          ) : (
-            <>
-              <div className="best-fare-card">
-                <div className="best-fare-label">最安候補</div>
-                <div className="best-fare-price">{formatYen(bestResult?.total)}</div>
-                <div className="best-fare-meta">
-                  <span className="best-fare-chip">{bestResult?.carrier}</span>
-                  <span className="best-fare-chip">{bestResult?.candidateLabel}</span>
-                  <span className="best-fare-chip">
-                    参照: {getCalcTypeLabel(bestResult)}
-                  </span>
-                  <span className="best-fare-chip">
-                    地域: {bestResult?.region || "-"}
-                  </span>
-                  {bestResult?.displayCarrierNote ? (
-                    <span className="best-fare-chip">{bestResult.displayCarrierNote}</span>
-                  ) : null}
-                </div>
+        {!loading && !loadError && (
+          <>
+            <section className="card">
+              <div className="card-header">
+                <h2>検索条件</h2>
               </div>
 
-              <div className="selected-product-summary">
-                <div className="summary-row">
-                  <span className="summary-label">選択商品</span>
-                  <span className="summary-value">
-                    {toStr(selectedProduct["品番"])} / {toStr(selectedProduct["品名"])}
-                  </span>
-                </div>
-                <div className="summary-row">
-                  <span className="summary-label">基準サイズ</span>
-                  <span className="summary-value">
-                    {toStr(selectedProduct["基準サイズ"]) || "-"}
-                  </span>
-                </div>
-                <div className="summary-row">
-                  <span className="summary-label">実重量</span>
-                  <span className="summary-value">
-                    {toStr(selectedProduct["実重量"]) || "-"}
-                  </span>
-                </div>
-                <div className="summary-row">
-                  <span className="summary-label">m3重量</span>
-                  <span className="summary-value">
-                    {toStr(selectedProduct["m3重量"]) || "-"}
-                  </span>
-                </div>
-                <div className="summary-row">
-                  <span className="summary-label">送り先</span>
-                  <span className="summary-value">{prefecture}</span>
-                </div>
-              </div>
-
-              <div className="selected-product-summary" style={{ marginTop: "-4px" }}>
-                <div className="summary-row">
-                  <span className="summary-label">運送便①</span>
-                  <span className="summary-value">{toStr(selectedProduct["運送便①"]) || "-"}</span>
-                </div>
-                <div className="summary-row">
-                  <span className="summary-label">運送便②</span>
-                  <span className="summary-value">{toStr(selectedProduct["運送便②"]) || "-"}</span>
-                </div>
-                <div className="summary-row">
-                  <span className="summary-label">運送便③</span>
-                  <span className="summary-value">{toStr(selectedProduct["運送便③"]) || "-"}</span>
-                </div>
-                <div className="summary-row">
-                  <span className="summary-label">西濃別表</span>
-                  <span className="summary-value">{toStr(selectedProduct["西濃別表"]) || "-"}</span>
-                </div>
-                <div className="summary-row">
-                  <span className="summary-label">表示候補数</span>
-                  <span className="summary-value">{fareResults.length}</span>
-                </div>
-              </div>
-
-              <div className="table-scroll">
-                <table className="data-table result-table">
-                  <thead>
-                    <tr>
-                      <th>運送会社</th>
-                      <th>元候補</th>
-                      <th>候補元</th>
-                      <th>変換</th>
-                      <th>参照</th>
-                      <th>参照値</th>
-                      <th>地域</th>
-                      <th>運賃</th>
-                      <th>離島加算</th>
-                      <th>中継料</th>
-                      <th>合計</th>
-                      <th>状態</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fareResults.map((row, index) => (
-                      <tr
-                        key={`${row.carrier}-${row.originalCarrier}-${row.source}-${index}`}
-                        className={row.isCheapest ? "is-cheapest" : ""}
+              <div className="card-body">
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="keyword">品番・品名</label>
+                    <div className="input-row">
+                      <input
+                        id="keyword"
+                        type="text"
+                        value={keyword}
+                        onChange={(e) => setKeyword(e.target.value)}
+                        placeholder="品番または品名で検索"
+                      />
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={() => setKeyword("")}
                       >
-                        <td>{row.carrier}</td>
-                        <td>{row.originalCarrier || "-"}</td>
-                        <td>{row.candidateLabel}</td>
-                        <td>{row.displayCarrierNote || "-"}</td>
-                        <td>{getCalcTypeLabel(row)}</td>
-                        <td>{getReferenceValueLabel(row)}</td>
-                        <td>{row.region || "-"}</td>
-                        <td>{formatYen(row.fare)}</td>
-                        <td>{formatYen(row.islandFee)}</td>
-                        <td>{formatYen(row.relayFee)}</td>
-                        <td className="total-cell">{formatYen(row.total)}</td>
-                        <td>
-                          {row.isCheapest ? (
-                            <span className="cheapest-badge">最安</span>
-                          ) : (
-                            <span className="normal-badge">候補</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        クリア
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="prefecture">都道府県</label>
+                    <select
+                      id="prefecture"
+                      value={prefecture}
+                      onChange={(e) => setPrefecture(e.target.value)}
+                    >
+                      {PREFECTURES.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="summary-row">
+                  <div className="summary-chip">
+                    検索件数: {candidateProducts.length}
+                  </div>
+                  <div className="summary-chip">
+                    選択商品: {selectedCode || "-"}
+                  </div>
+                  <div className="summary-chip">配送先: {prefecture || "-"}</div>
+                </div>
               </div>
-            </>
-          )}
-        </section>
-      </main>
+            </section>
+
+            <section className="card">
+              <div className="card-header">
+                <h2>検索候補一覧</h2>
+              </div>
+
+              <div className="card-body compact-list-wrap">
+                {candidateProducts.length === 0 ? (
+                  <div className="empty-text">該当する商品がありません</div>
+                ) : (
+                  <div className="candidate-list">
+                    {candidateProducts.map((product) => {
+                      const code = getProductCode(product);
+                      const name = getProductName(product);
+                      const isActive = code === selectedCode;
+
+                      return (
+                        <button
+                          key={`${code}-${name}`}
+                          type="button"
+                          className={`candidate-item ${isActive ? "active" : ""}`}
+                          onClick={() => setSelectedProduct(product)}
+                        >
+                          <div className="candidate-code">{code || "-"}</div>
+                          <div className="candidate-name">{name || "(名称なし)"}</div>
+                          <div className="candidate-meta">
+                            <span>
+                              佐川サイズ: {toNumber(product?.["佐川サイズ"]) || "-"}
+                            </span>
+                            <span>
+                              西濃重量: {toNumber(product?.["西濃重量"]) || "-"}
+                            </span>
+                            <span>
+                              久留米重量: {toNumber(product?.["久留米重量"]) || "-"}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="card">
+              <div className="card-header">
+                <h2>運賃結果</h2>
+              </div>
+
+              <div className="card-body">
+                {!selectedProduct ? (
+                  <div className="empty-text">商品を選択してください</div>
+                ) : (
+                  <>
+                    <div className="result-top-card">
+                      <div className="result-top-main">
+                        <div className="result-top-title">最安候補</div>
+                        <div className="result-top-product">
+                          {getDisplayLabel(selectedProduct)}
+                        </div>
+                      </div>
+
+                      {bestFare ? (
+                        <div className="result-top-price-block">
+                          <div className="badge cheapest">最安</div>
+                          <div className="result-top-carrier">
+                            {normalizeCarrierName(bestFare.carrier)}
+                          </div>
+                          <div className="result-top-price">
+                            {formatCurrency(bestFare.total)}
+                          </div>
+                          <div className="result-top-sub">
+                            {bestFare.source} / {prefecture}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="result-top-price-block">
+                          <div className="result-top-carrier">該当なし</div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="selected-product-box">
+                      <div>
+                        <strong>品番:</strong> {selectedCode || "-"}
+                      </div>
+                      <div>
+                        <strong>品名:</strong> {selectedName || "-"}
+                      </div>
+                      <div>
+                        <strong>佐川サイズ:</strong>{" "}
+                        {toNumber(selectedProduct?.["佐川サイズ"]) || "-"}
+                      </div>
+                      <div>
+                        <strong>西濃重量:</strong>{" "}
+                        {toNumber(selectedProduct?.["西濃重量"]) || "-"}
+                      </div>
+                      <div>
+                        <strong>久留米重量:</strong>{" "}
+                        {toNumber(selectedProduct?.["久留米重量"]) || "-"}
+                      </div>
+                      <div>
+                        <strong>西濃別表:</strong>{" "}
+                        {toStr(selectedProduct?.["西濃別表"]) || "0"}
+                      </div>
+                    </div>
+
+                    {fareResults.length === 0 ? (
+                      <div className="empty-text">
+                        表示できる運賃候補がありません
+                      </div>
+                    ) : (
+                      <div className="table-wrap">
+                        <table className="result-table">
+                          <thead>
+                            <tr>
+                              <th>運送会社</th>
+                              <th>元候補</th>
+                              <th>候補元</th>
+                              <th>変換</th>
+                              <th>参照</th>
+                              <th>参照値</th>
+                              <th>地域</th>
+                              <th>運賃</th>
+                              <th>離島</th>
+                              <th>中継</th>
+                              <th>合計</th>
+                              <th>状態</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {fareResults.map((row) => {
+                              const carrier = normalizeCarrierName(row.carrier);
+                              const originalCarrier = normalizeCarrierName(
+                                row.originalCarrier
+                              );
+
+                              return (
+                                <tr
+                                  key={`${row.source}-${carrier}-${row.region}-${row.total}`}
+                                  className={row.isCheapest ? "is-best" : ""}
+                                >
+                                  <td>{carrier || "-"}</td>
+                                  <td>{originalCarrier || "-"}</td>
+                                  <td>{row.source || "-"}</td>
+                                  <td>{row.displayCarrierNote || "-"}</td>
+                                  <td>{getRefTypeLabel(row)}</td>
+                                  <td>{getRefValue(row) || "-"}</td>
+                                  <td>{toStr(row.region) || "-"}</td>
+                                  <td>{formatCurrency(row.fare)}</td>
+                                  <td>{formatCurrency(row.islandFee)}</td>
+                                  <td>{formatCurrency(row.relayFee)}</td>
+                                  <td className="total-cell">
+                                    {formatCurrency(row.total)}
+                                  </td>
+                                  <td>
+                                    {row.isCheapest ? (
+                                      <span className="badge cheapest">
+                                        {getStatusLabel(row)}
+                                      </span>
+                                    ) : (
+                                      "-"
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </section>
+          </>
+        )}
+      </div>
     </div>
   );
 }

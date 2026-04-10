@@ -119,14 +119,37 @@ function findWeightFareRow(rows, region, weight) {
   );
 }
 
-function calcFareForSizeCarrier({ carrierRows, carrier, size, region }) {
-  const row = findSizeFareRow(carrierRows, carrier, size, region);
+function calcFareForWeightCarrier({
+  carrier,
+  carriersRows,
+  seinoRows,
+  weight,
+  region,
+}) {
+  const c = normalizeCarrierName(carrier);
+
+  let rows = [];
+
+  if (c === "西濃") {
+    rows = seinoRows;
+  }
+
+  if (c === "久留米") {
+    // ★久留米専用が無ければ西濃を使う
+    const kurumeRows = carriersRows.filter(
+      (r) => normalizeCarrierName(r["運送会社"]) === "久留米"
+    );
+
+    rows = kurumeRows.length > 0 ? kurumeRows : seinoRows;
+  }
+
+  const row = findWeightFareRow(rows, region, weight);
   if (!row) return null;
 
   return {
-    calcType: "size",
-    matchedSize: toNumber(row["サイズ"]),
-    matchedWeight: 0,
+    calcType: "weight",
+    matchedSize: 0,
+    matchedWeight: toNumber(row["重量"]),
     fare: toNumber(row["運賃"]),
     islandFee: toNumber(row["離島加算"]),
     relayFee: toNumber(row["中継料"]),

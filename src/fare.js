@@ -143,10 +143,12 @@ function calcFareForWeightCarrier({
   let rows = [];
 
   if (c === "西濃") rows = seinoRows;
-  if (c === "久留米")
+
+  if (c === "久留米") {
     rows = carriersRows.filter(
       (r) => normalizeCarrierName(r["運送会社"]) === "久留米"
     );
+  }
 
   const row = findWeightFareRow(rows, region, weight);
   if (!row) return null;
@@ -159,6 +161,15 @@ function calcFareForWeightCarrier({
     islandFee: toNumber(row["離島加算"]),
     relayFee: toNumber(row["中継料"]),
   };
+}
+
+// ★入力条件チェック（今回の追加仕様）
+function isValidInputForCarrier(carrier, size, weight) {
+  if (isWeightCarrier(carrier)) {
+    return weight > 0;
+  } else {
+    return size > 0;
+  }
 }
 
 function buildCandidates(product, prefecture) {
@@ -215,113 +226,11 @@ export function calculateFareResults({
   const weight = getChargeableWeight(product);
   const candidates = buildCandidates(product, prefecture);
 
-  const results = candidates.map((candidate) => {
-    const carrier = candidate.carrier;
-    const region = resolveRegionCode(
-      carrierRegions,
-      carrier,
-      prefecture
-    );
-
-    let fareResult = null;
-
-    if (isWeightCarrier(carrier)) {
-      fareResult = calcFareForWeightCarrier({
-        carrier,
-        carriersRows: carriers,
-        seinoRows: carriersSeino,
-        weight,
-        region,
-      });
-    } else {
-      fareResult = calcFareForSizeCarrier({
-        carrierRows: carriers,
-        carrier,
-        size,
-        region,
-      });
-    }
-
-    if (!fareResult) {
-      return {
-        ...candidate,
-        region,
-        size,
-        chargeableWeight: weight,
-        total: 0,
-        error: "未一致",
-      };
-    }
-
-    const total =
-      fareResult.fare +
-      fareResult.islandFee +
-      fareResult.relayFee;
-
-    return {
-      ...candidate,
-      region,
-      size,
-      chargeableWeight: weight,
-      ...fareResult,
-      total,
-      error: "",
-    };
-  });
-
-  const sorted = sortResults(results);
-  const cheapest =
-    sorted.length > 0
-      ? Math.min(...sorted.map((r) => r.total || Infinity))
-      : null;
-
-  return sorted.map((row) => ({
-    ...row,
-    isCheapest: row.total === cheapest,
-    cheapestBadge: row.total === cheapest ? "最安" : "",
-    candidateLabel: `候補元: ${row.source}`,
-    displayCarrierNote: row.replacedFromSeino ? "西濃→久留米" : "",
-  }));
-}
-
-export function buildFareResults(params) {
-  return calculateFareResults(params);
-}
-
-export function findBestFare(params) {
-  const results = calculateFareResults(params);
-  return results.find((r) => r.isCheapest) || null;
-}
-
-function isValidInputForCarrier(carrier, size, weight) {
-  if (isWeightCarrier(carrier)) {
-    return weight > 0;
-  } else {
-    return size > 0;
-  }
-}
-
-
-
-
-export function calculateFareResults({
-  product,
-  prefecture,
-  carrierRegions = [],
-  carriers = [],
-  carriersSeino = [],
-}) {
-  if (!product || !prefecture) return [];
-
-  const size = getSize(product);
-  const weight = getChargeableWeight(product);
-  const candidates = buildCandidates(product, prefecture);
-
   const results = candidates
     .map((candidate) => {
       const carrier = candidate.carrier;
 
-      // ★ここ追加（入力不足なら除外）
+      // ★ここ重要（空白除外）
       if (!isValidInputForCarrier(carrier, size, weight)) {
         return null;
       }
@@ -351,9 +260,7 @@ export function calculateFareResults({
         });
       }
 
-      if (!fareResult) {
-        return null;
-      }
+      if (!fareResult) return null;
 
       const total =
         fareResult.fare +
@@ -367,10 +274,9 @@ export function calculateFareResults({
         chargeableWeight: weight,
         ...fareResult,
         total,
-        error: "",
       };
     })
-    .filter(Boolean); // ← null除外
+    .filter(Boolean);
 
   const sorted = sortResults(results);
 
@@ -388,3 +294,11 @@ export function calculateFareResults({
   }));
 }
 
+export function buildFareResults(params) {
+  return calculateFareResults(params);
+}
+
+export function findBestFare(params) {
+  const results = calculateFareResults(params);
+  return results.find((r) => r.isCheapest) || null;
+}

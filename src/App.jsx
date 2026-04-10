@@ -417,11 +417,6 @@ export default function App() {
                           {toStr(selectedProduct?.["西濃別表"]) || "0"}
                         </div>
                       </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">表示候補数</div>
-                        <div className="meta-value">{fareResults.length}</div>
-                      </div>
                     </div>
 
                     <div className="result-table-wrap">

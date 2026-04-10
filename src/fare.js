@@ -71,12 +71,18 @@ function toStr(value) {
 
 function toNumber(value) {
   if (value == null || value === "") return 0;
+
   const normalized = String(value)
     .replace(/,/g, "")
     .replace(/[^\d.-]/g, "")
     .trim();
 
-  if (normalized === "" || normalized === "-" || normalized === "." || normalized === "-.") {
+  if (
+    normalized === "" ||
+    normalized === "-" ||
+    normalized === "." ||
+    normalized === "-."
+  ) {
     return 0;
   }
 
@@ -115,6 +121,11 @@ function getChargeableWeight(product) {
 
 function getSize(product) {
   return toNumber(product?.["基準サイズ"]);
+}
+
+function isSeinoSpecialTableOn(product) {
+  const raw = toStr(product?.["西濃別表"]).toLowerCase();
+  return raw === "1" || raw === "true";
 }
 
 function findRegionRow(regionRows, carrier, prefecture) {
@@ -240,11 +251,18 @@ function calcFareForWeightCarrier({
   seinoRows,
   weight,
   region,
+  useSeinoSpecialTable,
 }) {
   const c = normalizeCarrierName(carrier);
 
   if (c === "西濃") {
-    const row = findWeightFareRow(seinoRows, region, weight);
+    const baseRows = useSeinoSpecialTable
+      ? seinoRows
+      : carriersRows.filter(
+          (r) => normalizeCarrierName(r["運送会社"]) === "西濃"
+        );
+
+    const row = findWeightFareRow(baseRows, region, weight);
     if (!row) return null;
 
     const fare = toNumber(row["運賃"]);
@@ -271,7 +289,7 @@ function calcFareForWeightCarrier({
 
     const fare = toNumber(row["運賃"]);
     const islandFee = toNumber(row["離島加算"]);
-    const relayFee = toNumber(row["中継料"]);
+    const relayFee = toNumber(row["中継料"] ?? row["中継加算"]);
 
     return {
       calcType: "weight",
@@ -300,7 +318,6 @@ function buildCandidates(product) {
       originalCarrier,
       carrier: originalCarrier,
       priorityIndex: index + 1,
-      replacedFromSeino: false,
     });
   });
 
@@ -325,6 +342,7 @@ export function calculateFareResults({
 
   const size = getSize(product);
   const chargeableWeight = getChargeableWeight(product);
+  const useSeinoSpecialTable = isSeinoSpecialTableOn(product);
   const candidates = buildCandidates(product);
 
   const rawResults = candidates.map((candidate) => {
@@ -349,6 +367,7 @@ export function calculateFareResults({
         seinoRows: carriersSeino,
         weight: chargeableWeight,
         region,
+        useSeinoSpecialTable,
       });
     } else {
       fareResult = calcFareForSizeCarrier({
@@ -359,13 +378,8 @@ export function calculateFareResults({
       });
     }
 
-    if (!fareResult) {
-      return null;
-    }
-
-    if (fareResult.total <= 0) {
-      return null;
-    }
+    if (!fareResult) return null;
+    if (fareResult.total <= 0) return null;
 
     return {
       ...candidate,
@@ -373,7 +387,6 @@ export function calculateFareResults({
       size,
       chargeableWeight,
       ...fareResult,
-      error: "",
     };
   });
 

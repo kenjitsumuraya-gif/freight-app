@@ -238,7 +238,7 @@ export default function App() {
         <header className="app-header">
           <h1>品番・品名から運賃を調べるアプリ</h1>
           <p>
-            品番の完全一致だけでなく、品名や語番の部分一致でも検索できます。商品CSVの運送便①〜③を見て候補運賃を表示します。
+            品番の完全一致だけでなく、品名や語番の部分一致でも検索できます。
           </p>
         </header>
 
@@ -383,69 +383,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="meta-grid">
-                      <div className="meta-card meta-card-wide">
-                        <div className="meta-label">選択商品</div>
-                        <div className="meta-value">
-                          {getDisplayLabel(selectedProduct)}
-                        </div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">基準サイズ</div>
-                        <div className="meta-value">
-                          {toNumber(selectedProduct?.["佐川サイズ"]) || "-"}
-                        </div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">実重量</div>
-                        <div className="meta-value">-</div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">m3重量</div>
-                        <div className="meta-value">-</div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">送り先</div>
-                        <div className="meta-value">{prefecture || "-"}</div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">運送便①</div>
-                        <div className="meta-value">
-                          {toStr(selectedProduct?.["運送便①"]) || "-"}
-                        </div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">運送便②</div>
-                        <div className="meta-value">
-                          {toStr(selectedProduct?.["運送便②"]) || "-"}
-                        </div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">運送便③</div>
-                        <div className="meta-value">
-                          {toStr(selectedProduct?.["運送便③"]) || "-"}
-                        </div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">西濃別表</div>
-                        <div className="meta-value">
-                          {toStr(selectedProduct?.["西濃別表"]) || "0"}
-                        </div>
-                      </div>
-
-                      <div className="meta-card">
-                        <div className="meta-label">表示候補数</div>
-                        <div className="meta-value">{fareResults.length}</div>
-                      </div>
-                    </div>
+                 
 
                     <div className="result-table-wrap">
                       <table className="result-table">

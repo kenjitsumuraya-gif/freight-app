@@ -449,3 +449,15 @@ select:focus {
     font-size: 34px;
   }
 }
+.candidate-table tbody tr.active {
+  background: #dbe8ff;
+  border-left: 4px solid #4a7de8;
+}
+
+.candidate-table tbody tr.active td {
+  font-weight: 700;
+}
+
+.candidate-table tbody tr:hover {
+  background: #f3f7ff;
+}
